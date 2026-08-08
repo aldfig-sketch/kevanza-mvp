@@ -9,6 +9,7 @@ import { Alert } from '@/components/Alert'
 import { StatBadge } from '@/components/StatBadge'
 import { ProgressBar } from '@/components/ProgressBar'
 import { supabase } from '@/lib/supabase'
+import { obtenerOfertasPorLicitacion } from '@/lib/ofertas'
 import { ChevronDown, ArrowLeft, Edit2, Trash2, Clock, User, MapPin, DollarSign } from 'lucide-react'
 
 interface Licitacion {
@@ -67,6 +68,8 @@ export default function LicitacionDetailPage() {
   const [pendingEstado, setPendingEstado] = useState('')
   const [changingEstado, setChangingEstado] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'detalles' | 'ofertas'>('detalles')
+  const [numOfertas, setNumOfertas] = useState(0)
 
   useEffect(() => {
     if (id) {
@@ -84,6 +87,14 @@ export default function LicitacionDetailPage() {
 
       if (fetchError) throw fetchError
       setLicitacion(data)
+
+      // Cargar número de ofertas
+      try {
+        const ofertas = await obtenerOfertasPorLicitacion(id as string)
+        setNumOfertas(ofertas?.length || 0)
+      } catch (err) {
+        console.error('Error cargando ofertas:', err)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar licitación')
     } finally {
@@ -239,49 +250,78 @@ export default function LicitacionDetailPage() {
 
           {/* Quick Actions */}
           <Card className="mb-8 p-6" variant="elevated">
-            <div className="flex flex-wrap gap-3">
-              {canEdit && (
-                <Button
-                  onClick={() => router.push(`/licitaciones/${licitacion.id}/edit`)}
-                  variant="secondary"
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap gap-3">
+                {canEdit && (
+                  <Button
+                    onClick={() => router.push(`/licitaciones/${licitacion.id}/edit`)}
+                    variant="secondary"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Editar
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button onClick={() => setDeleteModal(true)} variant="danger">
+                    <Trash2 className="w-4 h-4" />
+                    Eliminar
+                  </Button>
+                )}
+                {getValidTransitions(licitacion.estado).length > 0 && (
+                  <select
+                    onChange={(e) => handleEstadoChange(e.target.value)}
+                    className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-teal-500"
+                  >
+                    <option value="">Cambiar estado...</option>
+                    {getValidTransitions(licitacion.estado).map((estado) => (
+                      <option key={estado} value={estado}>
+                        → {estado}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Tab Navigation */}
+              <div className="flex gap-1 border-b border-gray-200">
+                <button
+                  onClick={() => setActiveTab('detalles')}
+                  className={`px-4 py-2 font-medium transition-colors ${
+                    activeTab === 'detalles'
+                      ? 'border-b-2 border-teal-600 text-teal-600'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
                 >
-                  <Edit2 className="w-4 h-4" />
-                  Editar
-                </Button>
-              )}
-              {canDelete && (
-                <Button onClick={() => setDeleteModal(true)} variant="danger">
-                  <Trash2 className="w-4 h-4" />
-                  Eliminar
-                </Button>
-              )}
-              {getValidTransitions(licitacion.estado).length > 0 && (
-                <select
-                  onChange={(e) => handleEstadoChange(e.target.value)}
-                  className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-teal-500"
+                  Detalles
+                </button>
+                <button
+                  onClick={() => setActiveTab('ofertas')}
+                  className={`px-4 py-2 font-medium transition-colors ${
+                    activeTab === 'ofertas'
+                      ? 'border-b-2 border-teal-600 text-teal-600'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
                 >
-                  <option value="">Cambiar estado...</option>
-                  {getValidTransitions(licitacion.estado).map((estado) => (
-                    <option key={estado} value={estado}>
-                      → {estado}
-                    </option>
-                  ))}
-                </select>
-              )}
+                  Ofertas ({numOfertas})
+                </button>
+              </div>
             </div>
           </Card>
 
-          {/* Info Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <StatBadge icon="📍" label="Municipio" value={MUNICIPIOS[licitacion.municipio_id]} variant="info" />
-            <StatBadge icon="📦" label="Tipo" value={licitacion.tipo_licita} variant="primary" />
-            <StatBadge
-              icon="💰"
-              label="Presupuesto"
-              value={`$${licitacion.presupuesto_total.toLocaleString()}`}
-              variant="success"
-            />
-          </div>
+          {/* Tab Content */}
+          {activeTab === 'detalles' && (
+            <>
+              {/* Info Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <StatBadge icon="📍" label="Municipio" value={MUNICIPIOS[licitacion.municipio_id]} variant="info" />
+                <StatBadge icon="📦" label="Tipo" value={licitacion.tipo_licita} variant="primary" />
+                <StatBadge
+                  icon="💰"
+                  label="Presupuesto"
+                  value={`$${licitacion.presupuesto_total.toLocaleString()}`}
+                  variant="success"
+                />
+              </div>
 
           {/* Detalles Generales */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200/50 mb-6 overflow-hidden">
@@ -344,61 +384,89 @@ export default function LicitacionDetailPage() {
             )}
           </div>
 
-          {/* Criterios de Evaluación */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200/50 overflow-hidden">
-            <button
-              onClick={() => toggleSection('evaluacion')}
-              className="w-full px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition-colors border-b border-gray-200/50"
-            >
-              <h2 className="text-lg font-bold text-gray-900">Criterios de Evaluación</h2>
-              <ChevronDown
-                className={`w-5 h-5 transition-transform ${openSections.evaluacion ? 'rotate-180' : ''}`}
-              />
-            </button>
+              {/* Criterios de Evaluación */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200/50 overflow-hidden">
+                <button
+                  onClick={() => toggleSection('evaluacion')}
+                  className="w-full px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition-colors border-b border-gray-200/50"
+                >
+                  <h2 className="text-lg font-bold text-gray-900">Criterios de Evaluación</h2>
+                  <ChevronDown
+                    className={`w-5 h-5 transition-transform ${openSections.evaluacion ? 'rotate-180' : ''}`}
+                  />
+                </button>
 
-            {openSections.evaluacion && (
-              <div className="px-6 py-6 space-y-6">
-                <ProgressBar
-                  label="Precio"
-                  value={licitacion.ponderacion_precio}
-                  color="blue"
-                />
-                <ProgressBar
-                  label="Técnica"
-                  value={licitacion.ponderacion_tecnica}
-                  color="purple"
-                />
-                <ProgressBar
-                  label="Experiencia"
-                  value={licitacion.ponderacion_experiencia}
-                  color="green"
-                />
-                <ProgressBar
-                  label="Otro"
-                  value={licitacion.ponderacion_otro}
-                  color="orange"
-                />
+                {openSections.evaluacion && (
+                  <div className="px-6 py-6 space-y-6">
+                    <ProgressBar
+                      label="Precio"
+                      value={licitacion.ponderacion_precio}
+                      color="blue"
+                    />
+                    <ProgressBar
+                      label="Técnica"
+                      value={licitacion.ponderacion_tecnica}
+                      color="purple"
+                    />
+                    <ProgressBar
+                      label="Experiencia"
+                      value={licitacion.ponderacion_experiencia}
+                      color="green"
+                    />
+                    <ProgressBar
+                      label="Otro"
+                      value={licitacion.ponderacion_otro}
+                      color="orange"
+                    />
 
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">Total Ponderaciones</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-gray-900">
-                        {(
-                          licitacion.ponderacion_precio +
-                          licitacion.ponderacion_tecnica +
-                          licitacion.ponderacion_experiencia +
-                          licitacion.ponderacion_otro
-                        ).toFixed(2)}
-                        %
-                      </span>
-                      <span className="text-xl">✓</span>
+                    <div className="pt-4 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">Total Ponderaciones</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl font-bold text-gray-900">
+                            {(
+                              licitacion.ponderacion_precio +
+                              licitacion.ponderacion_tecnica +
+                              licitacion.ponderacion_experiencia +
+                              licitacion.ponderacion_otro
+                            ).toFixed(2)}
+                            %
+                          </span>
+                          <span className="text-xl">✓</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
+
+          {/* Tab: Ofertas */}
+          {activeTab === 'ofertas' && (
+            <div>
+              <Card className="text-center py-12" variant="outlined">
+                <div className="space-y-4">
+                  <div className="text-4xl">📤</div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {numOfertas > 0 ? `${numOfertas} Oferta${numOfertas !== 1 ? 's' : ''} Recibida${numOfertas !== 1 ? 's' : ''}` : 'Sin ofertas aún'}
+                    </h3>
+                    <p className="text-gray-600 mt-1">
+                      {numOfertas > 0
+                        ? 'Accede a la gestión completa de ofertas'
+                        : 'Los proveedores enviarán sus ofertas una vez publicada la licitación'}
+                    </p>
+                  </div>
+                  <div className="pt-2">
+                    <Button onClick={() => router.push(`/licitaciones/${licitacion.id}/ofertas`)}>
+                      {numOfertas > 0 ? 'Ver Ofertas' : '+ Agregar Oferta'}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
 
