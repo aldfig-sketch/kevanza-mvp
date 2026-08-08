@@ -129,7 +129,7 @@ export default function DashboardPage() {
             <Link href="/licitaciones/crear">
               <Button size="lg">
                 <Plus className="w-5 h-5" />
-                Nueva licitación
+                Nuevo requerimiento
               </Button>
             </Link>
           </div>
@@ -199,7 +199,7 @@ export default function DashboardPage() {
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <LineChartComponent data={lineChartData} title="Licitaciones por Mes" />
+            <LineChartComponent data={lineChartData} title="Requerimientos por Mes" />
 
             {donutData.length > 0 && (
               <DonutChartComponent data={donutData} title="Distribución por Estado" />
@@ -208,44 +208,47 @@ export default function DashboardPage() {
 
           {barData.length > 0 && (
             <div className="mb-8">
-              <BarChartComponent data={barData} title="Licitaciones por Tipo" />
+              <BarChartComponent data={barData} title="Requerimientos por Tipo" />
             </div>
           )}
 
           {/* Getting Started */}
           <Card className="p-8">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">🚀 Cómo usar KEVANZA</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-1">🚀 Cómo funciona KEVANZA</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              La gestión interna previa a publicar en Mercado Público.
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-teal-100 rounded-lg mb-3">
                   <span className="text-lg font-bold text-teal-600">1</span>
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-1">Crear</h4>
-                <p className="text-sm text-gray-600">Ingresa los detalles de tu licitación</p>
+                <h4 className="font-semibold text-gray-900 mb-1">Registrar</h4>
+                <p className="text-sm text-gray-600">Ingresa el requerimiento de compra de tu unidad</p>
               </div>
 
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mb-3">
                   <span className="text-lg font-bold text-blue-600">2</span>
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-1">Publicar</h4>
-                <p className="text-sm text-gray-600">Publica para que vean los proveedores</p>
+                <h4 className="font-semibold text-gray-900 mb-1">Elaborar bases</h4>
+                <p className="text-sm text-gray-600">Redacta bases, anexos y criterios de evaluación</p>
               </div>
 
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-orange-100 rounded-lg mb-3">
                   <span className="text-lg font-bold text-orange-600">3</span>
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-1">Evaluar</h4>
-                <p className="text-sm text-gray-600">Recibe y compara propuestas</p>
+                <h4 className="font-semibold text-gray-900 mb-1">Validar en equipo</h4>
+                <p className="text-sm text-gray-600">Revisión y aprobación interna con trazabilidad</p>
               </div>
 
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg mb-3">
                   <span className="text-lg font-bold text-green-600">4</span>
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-1">Adjudicar</h4>
-                <p className="text-sm text-gray-600">Selecciona al mejor oferente</p>
+                <h4 className="font-semibold text-gray-900 mb-1">Formalizar</h4>
+                <p className="text-sm text-gray-600">Genera el decreto y queda listo para publicar</p>
               </div>
             </div>
           </Card>

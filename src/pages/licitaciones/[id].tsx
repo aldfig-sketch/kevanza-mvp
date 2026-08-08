@@ -9,7 +9,6 @@ import { Alert } from '@/components/Alert'
 import { StatBadge } from '@/components/StatBadge'
 import { ProgressBar } from '@/components/ProgressBar'
 import { supabase } from '@/lib/supabase'
-import { obtenerOfertasPorLicitacion } from '@/lib/ofertas'
 import { ChevronDown, ArrowLeft, Edit2, Trash2, Clock, User, MapPin, DollarSign } from 'lucide-react'
 
 interface Licitacion {
@@ -61,8 +60,6 @@ export default function LicitacionDetailPage() {
   const [pendingEstado, setPendingEstado] = useState('')
   const [changingEstado, setChangingEstado] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'detalles' | 'ofertas'>('detalles')
-  const [numOfertas, setNumOfertas] = useState(0)
 
   useEffect(() => {
     if (id) {
@@ -80,14 +77,6 @@ export default function LicitacionDetailPage() {
 
       if (fetchError) throw fetchError
       setLicitacion(data)
-
-      // Cargar número de ofertas
-      try {
-        const ofertas = await obtenerOfertasPorLicitacion(id as string)
-        setNumOfertas(ofertas?.length || 0)
-      } catch (err) {
-        console.error('Error cargando ofertas:', err)
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar licitación')
     } finally {
@@ -227,7 +216,7 @@ export default function LicitacionDetailPage() {
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <p className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-1">
-                  Licitación #{licitacion.numero}
+                  Requerimiento #{licitacion.numero}
                 </p>
                 <h1 className="text-4xl font-bold text-gray-900 mb-2">{licitacion.titulo}</h1>
                 <div className="flex items-center gap-4 mt-3">
@@ -275,34 +264,11 @@ export default function LicitacionDetailPage() {
                 )}
               </div>
 
-              {/* Tab Navigation */}
-              <div className="flex gap-1 border-b border-gray-200">
-                <button
-                  onClick={() => setActiveTab('detalles')}
-                  className={`px-4 py-2 font-medium transition-colors ${
-                    activeTab === 'detalles'
-                      ? 'border-b-2 border-teal-600 text-teal-600'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Detalles
-                </button>
-                <button
-                  onClick={() => setActiveTab('ofertas')}
-                  className={`px-4 py-2 font-medium transition-colors ${
-                    activeTab === 'ofertas'
-                      ? 'border-b-2 border-teal-600 text-teal-600'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Ofertas ({numOfertas})
-                </button>
-              </div>
             </div>
           </Card>
 
-          {/* Tab Content */}
-          {activeTab === 'detalles' && (
+          {/* Contenido */}
+          {(
             <>
               {/* Info Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -338,7 +304,7 @@ export default function LicitacionDetailPage() {
                 )}
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
                   <div>
-                    <p className="text-sm text-gray-600 font-medium">Tipo de Licitación</p>
+                    <p className="text-sm text-gray-600 font-medium">Tipo de adquisición</p>
                     <p className="text-lg font-bold text-gray-900 mt-1">{licitacion.tipo_licita}</p>
                   </div>
                   <div>
@@ -433,31 +399,6 @@ export default function LicitacionDetailPage() {
             </>
           )}
 
-          {/* Tab: Ofertas */}
-          {activeTab === 'ofertas' && (
-            <div>
-              <Card className="text-center py-12" variant="outlined">
-                <div className="space-y-4">
-                  <div className="text-4xl">📤</div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {numOfertas > 0 ? `${numOfertas} Oferta${numOfertas !== 1 ? 's' : ''} Recibida${numOfertas !== 1 ? 's' : ''}` : 'Sin ofertas aún'}
-                    </h3>
-                    <p className="text-gray-600 mt-1">
-                      {numOfertas > 0
-                        ? 'Accede a la gestión completa de ofertas'
-                        : 'Los proveedores enviarán sus ofertas una vez publicada la licitación'}
-                    </p>
-                  </div>
-                  <div className="pt-2">
-                    <Button onClick={() => router.push(`/licitaciones/${licitacion.id}/ofertas`)}>
-                      {numOfertas > 0 ? 'Ver Ofertas' : '+ Agregar Oferta'}
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          )}
         </div>
       </div>
 
@@ -465,9 +406,9 @@ export default function LicitacionDetailPage() {
       {deleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-sm">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Eliminar Licitación</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Eliminar requerimiento</h3>
             <p className="text-gray-600 mb-6">
-              ¿Estás seguro que deseas eliminar esta licitación? Esta acción no se puede deshacer.
+              ¿Estás seguro que deseas eliminar este requerimiento? Esta acción no se puede deshacer.
             </p>
             <div className="flex gap-4">
               <Button onClick={() => setDeleteModal(false)} variant="secondary">
@@ -491,7 +432,7 @@ export default function LicitacionDetailPage() {
               <strong>{pendingEstado}</strong>?
             </p>
             <p className="text-sm text-gray-500 mb-6">
-              Este cambio afectará a los proveedores y evaluadores que trabajen en esta licitación.
+              Este cambio quedará registrado en la trazabilidad del requerimiento.
             </p>
             <div className="flex gap-4">
               <Button

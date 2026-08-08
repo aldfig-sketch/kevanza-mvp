@@ -117,8 +117,8 @@ export default function CrearLicitacionPage() {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
           <div className="text-center max-w-md">
             <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto mb-6" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Licitación creada!</h2>
-            <p className="text-gray-600">Tu licitación ha sido {loading ? 'guardada' : 'publicada'} exitosamente</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Requerimiento guardado!</h2>
+            <p className="text-gray-600">Tu requerimiento de compra ha sido registrado exitosamente</p>
             <p className="text-sm text-gray-500 mt-4">Redirigiendo...</p>
           </div>
         </div>
@@ -141,8 +141,8 @@ export default function CrearLicitacionPage() {
           </button>
 
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Crear licitación</h1>
-            <p className="text-gray-600">Completa todos los detalles de tu nueva licitación</p>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Nuevo requerimiento de compra</h1>
+            <p className="text-gray-600">Registra el requerimiento interno antes de publicarlo en Mercado Público</p>
           </div>
 
           {/* Error Alert */}
@@ -184,7 +184,7 @@ export default function CrearLicitacionPage() {
                   {/* Número */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Número de licitación *
+                      Número de requerimiento *
                     </label>
                     <input
                       type="text"
@@ -233,7 +233,7 @@ export default function CrearLicitacionPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Tipo de licitación
+                        Tipo de adquisición
                       </label>
                       <select
                         name="tipo_licita"

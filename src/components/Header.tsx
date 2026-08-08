@@ -44,7 +44,7 @@ export function Header() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Licitaciones
+                Requerimientos
               </Link>
               <Link
                 href="/dashboard"
@@ -118,7 +118,7 @@ export function Header() {
                   className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Licitaciones
+                  Requerimientos
                 </Link>
                 <Link
                   href="/dashboard"

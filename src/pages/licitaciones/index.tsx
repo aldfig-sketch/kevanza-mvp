@@ -91,13 +91,13 @@ export default function LicitacionesPage() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Licitaciones</h1>
-              <p className="text-gray-600">Gestiona {filteredLicitaciones.length} de {licitaciones.length} licitaciones</p>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Requerimientos</h1>
+              <p className="text-gray-600">Gestiona {filteredLicitaciones.length} de {licitaciones.length} requerimientos de compra</p>
             </div>
             <Link href="/licitaciones/crear">
               <Button size="lg">
                 <Plus className="w-5 h-5" />
-                Nueva licitación
+                Nuevo requerimiento
               </Button>
             </Link>
           </div>
@@ -160,15 +160,15 @@ export default function LicitacionesPage() {
           ) : licitaciones.length === 0 ? (
             <Card className="p-12 text-center">
               <div className="text-6xl mb-4">📋</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Sin licitaciones</h3>
-              <p className="text-gray-600 mb-6">Aún no hay licitaciones para este municipio</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Sin requerimientos</h3>
+              <p className="text-gray-600 mb-6">Aún no hay requerimientos de compra registrados</p>
               <Link href="/licitaciones/crear">
-                <Button size="lg">Crear la primera licitación</Button>
+                <Button size="lg">Crear el primer requerimiento</Button>
               </Link>
             </Card>
           ) : filteredLicitaciones.length === 0 ? (
             <Card className="p-12 text-center">
-              <p className="text-gray-600 mb-4">No hay licitaciones con los filtros seleccionados</p>
+              <p className="text-gray-600 mb-4">No hay requerimientos con los filtros seleccionados</p>
               <button
                 onClick={() => {
                   setFilterEstado(null)
