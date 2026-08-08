@@ -5,9 +5,10 @@ interface AlertProps {
   children: ReactNode
   type?: 'success' | 'error' | 'warning' | 'info'
   onClose?: () => void
+  className?: string
 }
 
-export function Alert({ children, type = 'info', onClose }: AlertProps) {
+export function Alert({ children, type = 'info', onClose, className = '' }: AlertProps) {
   const config = {
     success: {
       bg: 'bg-green-50',
@@ -39,7 +40,7 @@ export function Alert({ children, type = 'info', onClose }: AlertProps) {
   const Icon = c.icon
 
   return (
-    <div className={`flex gap-3 p-4 rounded-lg border ${c.bg} ${c.border} ${c.text}`}>
+    <div className={`flex gap-3 p-4 rounded-lg border ${c.bg} ${c.border} ${c.text} ${className}`}>
       <Icon className="w-5 h-5 flex-shrink-0 mt-0.5" />
       <div className="flex-1">
         <p className="text-sm">{children}</p>
