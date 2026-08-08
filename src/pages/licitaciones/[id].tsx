@@ -8,6 +8,7 @@ import { Button } from '@/components/Button'
 import { Alert } from '@/components/Alert'
 import { StatBadge } from '@/components/StatBadge'
 import { ProgressBar } from '@/components/ProgressBar'
+import { DocumentosSection } from '@/components/DocumentosSection'
 import { supabase } from '@/lib/supabase'
 import { ChevronDown, ArrowLeft, Edit2, Trash2, Clock, User, MapPin, DollarSign } from 'lucide-react'
 
@@ -398,6 +399,15 @@ export default function LicitacionDetailPage() {
               </div>
             </>
           )}
+
+          {/* Documentos del proceso */}
+          <div className="mt-6">
+            <DocumentosSection
+              licitacionId={licitacion.id}
+              userId={user?.id}
+              canEdit={licitacion.estado !== 'ADJUDICADA'}
+            />
+          </div>
 
         </div>
       </div>
