@@ -7,15 +7,20 @@ interface BadgeProps {
 
 export function Badge({ children, variant = 'default' }: BadgeProps) {
   const variants = {
-    default: 'bg-gray-100 text-gray-800',
-    success: 'bg-green-100 text-green-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    danger: 'bg-red-100 text-red-800',
-    info: 'bg-blue-100 text-blue-800',
+    default:
+      'bg-gray-200/50 backdrop-blur-sm text-gray-700 border border-gray-300/30 shadow-sm',
+    success:
+      'bg-green-100/50 backdrop-blur-sm text-green-700 border border-green-300/30 shadow-sm',
+    warning:
+      'bg-orange-100/50 backdrop-blur-sm text-orange-700 border border-orange-300/30 shadow-sm',
+    danger: 'bg-red-100/50 backdrop-blur-sm text-red-700 border border-red-300/30 shadow-sm',
+    info: 'bg-blue-100/50 backdrop-blur-sm text-blue-700 border border-blue-300/30 shadow-sm',
   }
 
   return (
-    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${variants[variant]}`}>
+    <span
+      className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${variants[variant]}`}
+    >
       {children}
     </span>
   )

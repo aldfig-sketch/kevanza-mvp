@@ -19,12 +19,12 @@ export function Header() {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200/50 sticky top-0 z-50 shadow-sm">
+    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200/20 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-teal-600 to-teal-700 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-teal-600 to-teal-700 rounded-lg flex items-center justify-center shadow-md">
               <span className="text-white font-bold text-sm">KV</span>
             </div>
             <span className="text-xl font-bold text-gray-900">KEVANZA</span>
@@ -35,7 +35,7 @@ export function Header() {
             <nav className="hidden md:flex gap-8">
               <Link
                 href="/licitaciones"
-                className={`text-sm font-medium transition-colors ${
+                className={`text-sm font-medium transition-colors duration-200 ${
                   router.pathname.startsWith('/licitaciones')
                     ? 'text-teal-600'
                     : 'text-gray-600 hover:text-gray-900'
@@ -45,7 +45,7 @@ export function Header() {
               </Link>
               <Link
                 href="/dashboard"
-                className={`text-sm font-medium transition-colors ${
+                className={`text-sm font-medium transition-colors duration-200 ${
                   router.pathname === '/dashboard'
                     ? 'text-teal-600'
                     : 'text-gray-600 hover:text-gray-900'
@@ -69,7 +69,7 @@ export function Header() {
 
                 <button
                   onClick={handleLogout}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-gray-900"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200 text-gray-600 hover:text-gray-900"
                   title="Cerrar sesión"
                 >
                   <LogOut className="w-5 h-5" />
@@ -79,13 +79,13 @@ export function Header() {
               <div className="hidden md:flex gap-3">
                 <Link
                   href="/auth/login"
-                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors duration-200"
                 >
                   Iniciar sesión
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="px-4 py-2 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                  className="px-4 py-2 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
                   Registrarse
                 </Link>
@@ -94,7 +94,7 @@ export function Header() {
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
               onClick={() => setMenuOpen(!menuOpen)}
             >
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -104,19 +104,19 @@ export function Header() {
 
         {/* Mobile Menu */}
         {menuOpen && (
-          <div className="md:hidden border-t border-gray-200/50 py-4 space-y-3">
+          <div className="md:hidden border-t border-gray-200/20 py-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
             {user ? (
               <>
                 <Link
                   href="/licitaciones"
-                  className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                   onClick={() => setMenuOpen(false)}
                 >
                   Licitaciones
                 </Link>
                 <Link
                   href="/dashboard"
-                  className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                   onClick={() => setMenuOpen(false)}
                 >
                   Dashboard
@@ -127,7 +127,7 @@ export function Header() {
                     handleLogout()
                     setMenuOpen(false)
                   }}
-                  className="w-full text-left px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 flex items-center gap-2"
                 >
                   <LogOut className="w-4 h-4" />
                   Cerrar sesión
@@ -137,14 +137,14 @@ export function Header() {
               <div className="space-y-2">
                 <Link
                   href="/auth/login"
-                  className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                   onClick={() => setMenuOpen(false)}
                 >
                   Iniciar sesión
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="block px-3 py-2 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-center"
+                  className="block px-3 py-2 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all duration-200 text-center"
                   onClick={() => setMenuOpen(false)}
                 >
                   Registrarse
