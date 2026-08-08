@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { ChevronDown, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react'
 
 export default function CrearLicitacionPage() {
-  const { user } = useAuth()
+  const { user, profile, municipioNombre } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -20,12 +20,10 @@ export default function CrearLicitacionPage() {
     titulo: '',
     descripcion: '',
     tipo_licita: 'Equipamiento',
-    municipio_id: '1',
     presupuesto_total: '',
     ponderacion_precio: '',
     ponderacion_tecnica: '',
-    ponderacion_experiencia: '',
-    ponderacion_otro: '',
+    ponderacion_plazo: '',
   })
 
   const [openSections, setOpenSections] = useState({
@@ -53,8 +51,7 @@ export default function CrearLicitacionPage() {
     const values = [
       parseFloat(formData.ponderacion_precio) || 0,
       parseFloat(formData.ponderacion_tecnica) || 0,
-      parseFloat(formData.ponderacion_experiencia) || 0,
-      parseFloat(formData.ponderacion_otro) || 0,
+      parseFloat(formData.ponderacion_plazo) || 0,
     ]
     return values.reduce((a, b) => a + b, 0)
   }
@@ -65,27 +62,35 @@ export default function CrearLicitacionPage() {
   const handleSubmit = async (e: React.FormEvent, publish = false) => {
     e.preventDefault()
     setError(null)
-    setLoading(true)
 
-    if (!ponderacionesValidas && Object.values(formData).some((v) => v.includes('ponderacion'))) {
-      setError(`Las ponderaciones deben sumar 100%. Suma actual: ${ponderacionesTotal}%`)
-      setLoading(false)
+    // Al publicar, las ponderaciones deben sumar exactamente 100%
+    const algunaPonderacion =
+      formData.ponderacion_precio || formData.ponderacion_tecnica || formData.ponderacion_plazo
+    if ((publish || algunaPonderacion) && !ponderacionesValidas) {
+      setError(`Las ponderaciones deben sumar 100%. Suma actual: ${ponderacionesTotal.toFixed(2)}%`)
+      setOpenSections((prev) => ({ ...prev, ponderaciones: true }))
       return
     }
 
+    if (!profile?.municipio_id) {
+      setError('No se pudo determinar tu municipio. Recarga la página e intenta de nuevo.')
+      return
+    }
+
+    setLoading(true)
+
     try {
-      const { data, error: insertError } = await supabase.from('licitaciones').insert([
+      const { error: insertError } = await supabase.from('licitaciones').insert([
         {
           numero: formData.numero,
           titulo: formData.titulo,
           descripcion: formData.descripcion,
-          municipio_id: parseInt(formData.municipio_id),
+          municipio_id: profile.municipio_id,
           tipo_licita: formData.tipo_licita,
           presupuesto_total: parseFloat(formData.presupuesto_total) || 0,
           ponderacion_precio: parseFloat(formData.ponderacion_precio) || 0,
           ponderacion_tecnica: parseFloat(formData.ponderacion_tecnica) || 0,
-          ponderacion_experiencia: parseFloat(formData.ponderacion_experiencia) || 0,
-          ponderacion_otro: parseFloat(formData.ponderacion_otro) || 0,
+          ponderacion_plazo: parseFloat(formData.ponderacion_plazo) || 0,
           estado: publish ? 'PUBLICADA' : 'BORRADOR',
           created_by: user?.id,
           published_at: publish ? new Date().toISOString() : null,
@@ -247,16 +252,13 @@ export default function CrearLicitacionPage() {
                       <label className="block text-sm font-semibold text-gray-900 mb-2">
                         Municipio
                       </label>
-                      <select
-                        name="municipio_id"
-                        value={formData.municipio_id}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 transition-colors"
-                      >
-                        <option value="1">Pucón</option>
-                        <option value="2">Villarrica</option>
-                        <option value="3">Temuco</option>
-                      </select>
+                      <div className="w-full px-4 py-2.5 border-2 border-gray-100 bg-gray-50 rounded-lg text-gray-700 flex items-center gap-2">
+                        <span>📍</span>
+                        <span className="font-medium">{municipioNombre || 'Tu municipio'}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Se asigna automáticamente a tu municipio
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -329,12 +331,11 @@ export default function CrearLicitacionPage() {
                     📊 Las ponderaciones deben sumar exactamente 100%
                   </p>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {[
                       { name: 'ponderacion_precio', label: 'Precio (%)' },
                       { name: 'ponderacion_tecnica', label: 'Técnica (%)' },
-                      { name: 'ponderacion_experiencia', label: 'Experiencia (%)' },
-                      { name: 'ponderacion_otro', label: 'Otro (%)' },
+                      { name: 'ponderacion_plazo', label: 'Plazo (%)' },
                     ].map((field) => (
                       <div key={field.name}>
                         <label className="block text-sm font-semibold text-gray-900 mb-2">

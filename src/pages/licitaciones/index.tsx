@@ -10,7 +10,7 @@ import { Plus, Eye, Edit2, Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface Licitacion {
-  id: number
+  id: string
   numero: string
   titulo: string
   estado: string
@@ -20,7 +20,7 @@ interface Licitacion {
 }
 
 export default function LicitacionesPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [licitaciones, setLicitaciones] = useState<Licitacion[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,15 +36,22 @@ export default function LicitacionesPage() {
     if (user) {
       fetchLicitaciones()
     }
-  }, [user, authLoading, router])
+  }, [user, authLoading, profile, router])
 
   const fetchLicitaciones = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('licitaciones')
         .select('*')
-        .eq('municipio_id', 1)
         .order('created_at', { ascending: false })
+
+      // Filtrar por el municipio del usuario (UUID). Si aún no cargó el perfil,
+      // RLS igualmente limita los datos visibles al municipio autorizado.
+      if (profile?.municipio_id) {
+        query = query.eq('municipio_id', profile.municipio_id)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       setLicitaciones(data || [])

@@ -13,26 +13,19 @@ import { obtenerOfertasPorLicitacion } from '@/lib/ofertas'
 import { ChevronDown, ArrowLeft, Edit2, Trash2, Clock, User, MapPin, DollarSign } from 'lucide-react'
 
 interface Licitacion {
-  id: number
+  id: string
   numero: string
   titulo: string
   descripcion: string
   estado: string
   tipo_licita: string
-  municipio_id: number
+  municipio_id: string
   presupuesto_total: number
   ponderacion_precio: number
   ponderacion_tecnica: number
-  ponderacion_experiencia: number
-  ponderacion_otro: number
+  ponderacion_plazo: number
   created_at: string
   created_by: string
-}
-
-const MUNICIPIOS: { [key: number]: string } = {
-  1: 'Pucón',
-  2: 'Villarrica',
-  3: 'Temuco',
 }
 
 const VALID_TRANSITIONS: { [key: string]: string[] } = {
@@ -50,7 +43,7 @@ const ESTADO_COLORS: { [key: string]: 'default' | 'success' | 'warning' | 'dange
 }
 
 export default function LicitacionDetailPage() {
-  const { user } = useAuth()
+  const { user, municipioNombre } = useAuth()
   const router = useRouter()
   const { id } = router.query
 
@@ -313,7 +306,7 @@ export default function LicitacionDetailPage() {
             <>
               {/* Info Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <StatBadge icon="📍" label="Municipio" value={MUNICIPIOS[licitacion.municipio_id]} variant="info" />
+                <StatBadge icon="📍" label="Municipio" value={municipioNombre || '—'} variant="info" />
                 <StatBadge icon="📦" label="Tipo" value={licitacion.tipo_licita} variant="primary" />
                 <StatBadge
                   icon="💰"
@@ -351,7 +344,7 @@ export default function LicitacionDetailPage() {
                   <div>
                     <p className="text-sm text-gray-600 font-medium">Municipio</p>
                     <p className="text-lg font-bold text-gray-900 mt-1">
-                      {MUNICIPIOS[licitacion.municipio_id]}
+                      {municipioNombre || '—'}
                     </p>
                   </div>
                 </div>
@@ -409,33 +402,31 @@ export default function LicitacionDetailPage() {
                       color="purple"
                     />
                     <ProgressBar
-                      label="Experiencia"
-                      value={licitacion.ponderacion_experiencia}
+                      label="Plazo"
+                      value={licitacion.ponderacion_plazo}
                       color="green"
                     />
-                    <ProgressBar
-                      label="Otro"
-                      value={licitacion.ponderacion_otro}
-                      color="orange"
-                    />
 
-                    <div className="pt-4 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-700">Total Ponderaciones</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold text-gray-900">
-                            {(
-                              licitacion.ponderacion_precio +
-                              licitacion.ponderacion_tecnica +
-                              licitacion.ponderacion_experiencia +
-                              licitacion.ponderacion_otro
-                            ).toFixed(2)}
-                            %
-                          </span>
-                          <span className="text-xl">✓</span>
+                    {(() => {
+                      const total =
+                        (licitacion.ponderacion_precio || 0) +
+                        (licitacion.ponderacion_tecnica || 0) +
+                        (licitacion.ponderacion_plazo || 0)
+                      const valido = Math.abs(total - 100) < 0.01
+                      return (
+                        <div className="pt-4 border-t border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-700">Total Ponderaciones</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl font-bold text-gray-900">
+                                {total.toFixed(2)}%
+                              </span>
+                              <span className="text-xl">{valido ? '✓' : '⚠'}</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      )
+                    })()}
                   </div>
                 )}
               </div>

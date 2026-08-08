@@ -21,7 +21,7 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, profile, municipioNombre, loading: authLoading } = useAuth()
   const router = useRouter()
   const [stats, setStats] = useState<DashboardStats>({
     total: 0,
@@ -43,11 +43,15 @@ export default function DashboardPage() {
     if (user) {
       fetchStats()
     }
-  }, [user])
+  }, [user, profile])
 
   const fetchStats = async () => {
     try {
-      const { data, error } = await supabase.from('licitaciones').select('estado,tipo_licita')
+      let query = supabase.from('licitaciones').select('estado,tipo_licita')
+      if (profile?.municipio_id) {
+        query = query.eq('municipio_id', profile.municipio_id)
+      }
+      const { data, error } = await query
 
       if (error) throw error
 
@@ -115,8 +119,12 @@ export default function DashboardPage() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-12">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard</h1>
-              <p className="text-gray-600">Bienvenido, {user.email?.split('@')[0]}</p>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                Hola, {profile?.nombre || profile?.full_name || user.email?.split('@')[0]} 👋
+              </h1>
+              <p className="text-gray-600">
+                {municipioNombre ? `Municipalidad de ${municipioNombre}` : 'Panel de gestión de licitaciones'}
+              </p>
             </div>
             <Link href="/licitaciones/crear">
               <Button size="lg">

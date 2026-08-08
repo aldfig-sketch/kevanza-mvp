@@ -5,9 +5,12 @@ import { LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 
 export function Header() {
-  const { user, signOut } = useAuth()
+  const { user, profile, municipioNombre, signOut } = useAuth()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const displayName =
+    profile?.nombre || profile?.full_name || user?.email?.split('@')[0] || 'Usuario'
 
   const handleLogout = async () => {
     await signOut()
@@ -60,10 +63,13 @@ export function Header() {
           <div className="flex items-center gap-2 md:gap-4">
             {user ? (
               <>
-                <div className="hidden md:flex items-center gap-4">
+                <div className="hidden md:flex items-center gap-3">
                   <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">{user.email?.split('@')[0]}</p>
-                    <p className="text-xs text-gray-500">Municipio</p>
+                    <p className="text-sm font-medium text-gray-900">{displayName}</p>
+                    <p className="text-xs text-gray-500">{municipioNombre || 'Municipio'}</p>
+                  </div>
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center text-white text-sm font-semibold shadow-sm">
+                    {displayName.charAt(0).toUpperCase()}
                   </div>
                 </div>
 

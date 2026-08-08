@@ -8,22 +8,21 @@ import { supabase } from '@/lib/supabase'
 import { ChevronDown, ArrowLeft } from 'lucide-react'
 
 interface Licitacion {
-  id: number
+  id: string
   numero: string
   titulo: string
   descripcion: string
   estado: string
   tipo_licita: string
-  municipio_id: number
+  municipio_id: string
   presupuesto_total: number
   ponderacion_precio: number
   ponderacion_tecnica: number
-  ponderacion_experiencia: number
-  ponderacion_otro: number
+  ponderacion_plazo: number
 }
 
 export default function EditLicitacionPage() {
-  const { user } = useAuth()
+  const { user, municipioNombre } = useAuth()
   const router = useRouter()
   const { id } = router.query
 
@@ -38,12 +37,10 @@ export default function EditLicitacionPage() {
     titulo: '',
     descripcion: '',
     tipo_licita: 'Equipamiento',
-    municipio_id: '1',
     presupuesto_total: '',
     ponderacion_precio: '',
     ponderacion_tecnica: '',
-    ponderacion_experiencia: '',
-    ponderacion_otro: '',
+    ponderacion_plazo: '',
   })
 
   const [openSections, setOpenSections] = useState({
@@ -80,12 +77,10 @@ export default function EditLicitacionPage() {
         titulo: data.titulo,
         descripcion: data.descripcion || '',
         tipo_licita: data.tipo_licita,
-        municipio_id: data.municipio_id.toString(),
-        presupuesto_total: data.presupuesto_total.toString(),
-        ponderacion_precio: data.ponderacion_precio.toString(),
-        ponderacion_tecnica: data.ponderacion_tecnica.toString(),
-        ponderacion_experiencia: data.ponderacion_experiencia.toString(),
-        ponderacion_otro: data.ponderacion_otro.toString(),
+        presupuesto_total: (data.presupuesto_total ?? 0).toString(),
+        ponderacion_precio: (data.ponderacion_precio ?? 0).toString(),
+        ponderacion_tecnica: (data.ponderacion_tecnica ?? 0).toString(),
+        ponderacion_plazo: (data.ponderacion_plazo ?? 0).toString(),
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar licitación')
@@ -113,8 +108,7 @@ export default function EditLicitacionPage() {
     const values = [
       parseFloat(formData.ponderacion_precio) || 0,
       parseFloat(formData.ponderacion_tecnica) || 0,
-      parseFloat(formData.ponderacion_experiencia) || 0,
-      parseFloat(formData.ponderacion_otro) || 0,
+      parseFloat(formData.ponderacion_plazo) || 0,
     ]
     return values.reduce((a, b) => a + b, 0)
   }
@@ -140,13 +134,12 @@ export default function EditLicitacionPage() {
           numero: formData.numero,
           titulo: formData.titulo,
           descripcion: formData.descripcion,
-          municipio_id: parseInt(formData.municipio_id),
           tipo_licita: formData.tipo_licita,
           presupuesto_total: parseFloat(formData.presupuesto_total) || 0,
           ponderacion_precio: parseFloat(formData.ponderacion_precio) || 0,
           ponderacion_tecnica: parseFloat(formData.ponderacion_tecnica) || 0,
-          ponderacion_experiencia: parseFloat(formData.ponderacion_experiencia) || 0,
-          ponderacion_otro: parseFloat(formData.ponderacion_otro) || 0,
+          ponderacion_plazo: parseFloat(formData.ponderacion_plazo) || 0,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
 
@@ -300,16 +293,10 @@ export default function EditLicitacionPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Municipio
                     </label>
-                    <select
-                      name="municipio_id"
-                      value={formData.municipio_id}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    >
-                      <option value="1">Pucón</option>
-                      <option value="2">Villarrica</option>
-                      <option value="3">Temuco</option>
-                    </select>
+                    <div className="w-full px-4 py-2 border border-gray-100 bg-gray-50 rounded-lg text-gray-700 flex items-center gap-2">
+                      <span>📍</span>
+                      <span className="font-medium">{municipioNombre || 'Tu municipio'}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -367,7 +354,7 @@ export default function EditLicitacionPage() {
                   Las ponderaciones deben sumar exactamente 100%
                 </p>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Precio (%)
@@ -402,28 +389,12 @@ export default function EditLicitacionPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Experiencia (%)
+                      Plazo (%)
                     </label>
                     <input
                       type="number"
-                      name="ponderacion_experiencia"
-                      value={formData.ponderacion_experiencia}
-                      onChange={handleChange}
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Otro (%)
-                    </label>
-                    <input
-                      type="number"
-                      name="ponderacion_otro"
-                      value={formData.ponderacion_otro}
+                      name="ponderacion_plazo"
+                      value={formData.ponderacion_plazo}
                       onChange={handleChange}
                       min="0"
                       max="100"
