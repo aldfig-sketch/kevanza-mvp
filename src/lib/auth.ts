@@ -1,18 +1,9 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase credentials')
-}
-
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    storageKey: 'kevanza-auth',
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-  },
-})
+// IMPORTANTE: reutilizar el ÚNICO cliente de Supabase de la app.
+// Antes existían dos clientes con distinto storage (este y el de ./supabase),
+// por lo que la sesión guardada por signIn no era vista por AuthContext
+// → login exitoso pero rebote a la pantalla inicial. Ahora es uno solo.
+export { supabase } from './supabase'
+import { supabase } from './supabase'
 
 export async function signUp(email: string, password: string, fullName?: string) {
   const { data, error } = await supabase.auth.signUp({
