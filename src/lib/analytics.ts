@@ -2,7 +2,7 @@
  * Analytics - KEVANZA
  * Event tracking para métricas clave
  *
- * Eventos: crear_licitacion, recibir_oferta, evaluar_oferta, generar_reporte
+ * Eventos: crear_requerimiento, cargar_documento, cambiar_estado, generar_reporte
  * Almacenamiento: Base de datos en tabla 'analytics_events'
  */
 
@@ -13,18 +13,16 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 export type AnalyticsEventType =
-  | 'crear_licitacion'
-  | 'recibir_oferta'
-  | 'evaluar_oferta'
+  | 'crear_requerimiento'
+  | 'cargar_documento'
+  | 'marcar_listo_mercado_publico'
   | 'generar_reporte'
-  | 'marcar_ganadora'
   | 'cambiar_estado'
 
 interface AnalyticsEvent {
   eventType: AnalyticsEventType
-  municipioId: string
+  organismoId: string
   licitacionId?: string
-  ofertaId?: string
   userId?: string
   metadata?: Record<string, any>
 }
@@ -37,9 +35,8 @@ export async function trackEvent(event: AnalyticsEvent): Promise<void> {
     await supabase.from('analytics_events').insert([
       {
         event_type: event.eventType,
-        municipio_id: event.municipioId,
+        municipio_id: event.organismoId,
         licitacion_id: event.licitacionId,
-        oferta_id: event.ofertaId,
         user_id: event.userId,
         metadata: event.metadata,
         created_at: new Date().toISOString(),
@@ -54,10 +51,10 @@ export async function trackEvent(event: AnalyticsEvent): Promise<void> {
 /**
  * Obtener métricas del último mes
  */
-export async function obtenerMetricasDelMes(municipioId: string): Promise<{
-  licitacionesCreadas: number
-  ofertasRecibidas: number
-  ofertasEvaluadas: number
+export async function obtenerMetricasDelMes(organismoId: string): Promise<{
+  requerimientosCreados: number
+  documentosCargados: number
+  listosMercadoPublico: number
   reportesGenerados: number
 }> {
   const ahora = new Date()
@@ -67,16 +64,16 @@ export async function obtenerMetricasDelMes(municipioId: string): Promise<{
     const { data, error } = await supabase
       .from('analytics_events')
       .select('event_type')
-      .eq('municipio_id', municipioId)
+      .eq('municipio_id', organismoId)
       .gte('created_at', hace30Dias.toISOString())
       .lte('created_at', ahora.toISOString())
 
     if (error) throw error
 
     const metricas = {
-      licitacionesCreadas: data.filter((e) => e.event_type === 'crear_licitacion').length,
-      ofertasRecibidas: data.filter((e) => e.event_type === 'recibir_oferta').length,
-      ofertasEvaluadas: data.filter((e) => e.event_type === 'evaluar_oferta').length,
+      requerimientosCreados: data.filter((e) => e.event_type === 'crear_requerimiento').length,
+      documentosCargados: data.filter((e) => e.event_type === 'cargar_documento').length,
+      listosMercadoPublico: data.filter((e) => e.event_type === 'marcar_listo_mercado_publico').length,
       reportesGenerados: data.filter((e) => e.event_type === 'generar_reporte').length,
     }
 
@@ -84,9 +81,9 @@ export async function obtenerMetricasDelMes(municipioId: string): Promise<{
   } catch (error) {
     console.error('[Analytics] Error obteniendo métricas:', error)
     return {
-      licitacionesCreadas: 0,
-      ofertasRecibidas: 0,
-      ofertasEvaluadas: 0,
+      requerimientosCreados: 0,
+      documentosCargados: 0,
+      listosMercadoPublico: 0,
       reportesGenerados: 0,
     }
   }
@@ -95,12 +92,12 @@ export async function obtenerMetricasDelMes(municipioId: string): Promise<{
 /**
  * Obtener eventos por día (últimos 30 días)
  */
-export async function obtenerEventosPorDia(municipioId: string): Promise<
+export async function obtenerEventosPorDia(organismoId: string): Promise<
   Array<{
     fecha: string
-    crear_licitacion: number
-    recibir_oferta: number
-    evaluar_oferta: number
+    crear_requerimiento: number
+    cargar_documento: number
+    marcar_listo_mercado_publico: number
     generar_reporte: number
   }>
 > {
@@ -111,7 +108,7 @@ export async function obtenerEventosPorDia(municipioId: string): Promise<
     const { data, error } = await supabase
       .from('analytics_events')
       .select('event_type, created_at')
-      .eq('municipio_id', municipioId)
+      .eq('municipio_id', organismoId)
       .gte('created_at', hace30Dias.toISOString())
       .lte('created_at', ahora.toISOString())
 
@@ -121,9 +118,9 @@ export async function obtenerEventosPorDia(municipioId: string): Promise<
     const porDia: Record<
       string,
       {
-        crear_licitacion: number
-        recibir_oferta: number
-        evaluar_oferta: number
+        crear_requerimiento: number
+        cargar_documento: number
+        marcar_listo_mercado_publico: number
         generar_reporte: number
       }
     > = {}
@@ -133,14 +130,17 @@ export async function obtenerEventosPorDia(municipioId: string): Promise<
 
       if (!porDia[fecha]) {
         porDia[fecha] = {
-          crear_licitacion: 0,
-          recibir_oferta: 0,
-          evaluar_oferta: 0,
+          crear_requerimiento: 0,
+          cargar_documento: 0,
+          marcar_listo_mercado_publico: 0,
           generar_reporte: 0,
         }
       }
 
-      porDia[fecha][evento.event_type as keyof typeof porDia[string]] += 1
+      const eventType = evento.event_type as keyof typeof porDia[string]
+      if (eventType in porDia[fecha]) {
+        porDia[fecha][eventType] += 1
+      }
     })
 
     return Object.entries(porDia)
@@ -153,11 +153,11 @@ export async function obtenerEventosPorDia(municipioId: string): Promise<
 }
 
 /**
- * Top municipios más activos
+ * Top organismos más activos
  */
 export async function obtenerTopMunicipios(): Promise<
   Array<{
-    municipioId: string
+    organismoId: string
     nombre: string
     total_eventos: number
   }>
@@ -172,29 +172,27 @@ export async function obtenerTopMunicipios(): Promise<
 
     if (error) throw error
 
-    // Contar eventos por municipio
-    const porMunicipio: Record<string, number> = {}
+    const porOrganismo: Record<string, number> = {}
 
     data.forEach((evento: any) => {
-      if (!porMunicipio[evento.municipio_id]) {
-        porMunicipio[evento.municipio_id] = 0
+      if (!porOrganismo[evento.municipio_id]) {
+        porOrganismo[evento.municipio_id] = 0
       }
-      porMunicipio[evento.municipio_id] += 1
+      porOrganismo[evento.municipio_id] += 1
     })
 
-    // Obtener nombres de municipios
-    const municipioIds = Object.keys(porMunicipio)
-    const { data: municipios, error: munError } = await supabase
+    const organismoIds = Object.keys(porOrganismo)
+    const { data: organismos, error: munError } = await supabase
       .from('municipios')
       .select('id, nombre')
-      .in('id', municipioIds)
+      .in('id', organismoIds)
 
     if (munError) throw munError
 
-    return Object.entries(porMunicipio)
-      .map(([municipioId, total]) => {
-        const nombre = municipios?.find((m: any) => m.id === municipioId)?.nombre || 'Unknown'
-        return { municipioId, nombre, total_eventos: total }
+    return Object.entries(porOrganismo)
+      .map(([organismoId, total]) => {
+        const nombre = organismos?.find((m: any) => m.id === organismoId)?.nombre || 'Unknown'
+        return { organismoId, nombre, total_eventos: total }
       })
       .sort((a, b) => b.total_eventos - a.total_eventos)
       .slice(0, 10)

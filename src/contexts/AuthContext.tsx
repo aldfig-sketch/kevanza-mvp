@@ -16,6 +16,7 @@ export interface UserProfile {
 interface AuthContextType {
   user: User | null
   profile: UserProfile | null
+  organismoNombre: string | null
   municipioNombre: string | null
   loading: boolean
   signOut: () => Promise<void>
@@ -24,6 +25,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
+  organismoNombre: null,
   municipioNombre: null,
   loading: true,
   signOut: async () => {},
@@ -32,24 +34,23 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [municipioNombre, setMunicipioNombre] = useState<string | null>(null)
+  const [organismoNombre, setOrganismoNombre] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const nextUser = session?.user || null
       setUser(nextUser)
-      setLoading(false)
 
-      // Cargar perfil (municipio, nombre, rol) en segundo plano
       if (nextUser) {
-        loadProfile(nextUser.id)
+        await loadProfile(nextUser.id)
       } else {
         setProfile(null)
-        setMunicipioNombre(null)
+        setOrganismoNombre(null)
       }
+      setLoading(false)
     })
 
     return () => {
@@ -63,14 +64,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!data) return
       setProfile(data as UserProfile)
 
-      // Resolver nombre del municipio para mostrarlo en la UI
+      // Resolver nombre del organismo/unidad compradora para mostrarlo en la UI.
       if (data.municipio_id) {
         const { data: muni } = await supabase
           .from('municipios')
           .select('nombre')
           .eq('id', data.municipio_id)
           .single()
-        if (muni?.nombre) setMunicipioNombre(muni.nombre)
+        if (muni?.nombre) setOrganismoNombre(muni.nombre)
       }
     } catch (err) {
       console.error('Error cargando perfil:', err)
@@ -81,11 +82,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
-    setMunicipioNombre(null)
+    setOrganismoNombre(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, municipioNombre, loading, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        organismoNombre,
+        municipioNombre: organismoNombre,
+        loading,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

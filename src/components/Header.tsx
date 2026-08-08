@@ -5,7 +5,7 @@ import { LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 
 export function Header() {
-  const { user, profile, municipioNombre, signOut } = useAuth()
+  const { user, profile, organismoNombre, signOut } = useAuth()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -66,7 +66,7 @@ export function Header() {
                 <div className="hidden md:flex items-center gap-3">
                   <div className="text-right">
                     <p className="text-sm font-medium text-gray-900">{displayName}</p>
-                    <p className="text-xs text-gray-500">{municipioNombre || 'Municipio'}</p>
+                    <p className="text-xs text-gray-500">{organismoNombre || 'Organismo'}</p>
                   </div>
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center text-white text-sm font-semibold shadow-sm">
                     {displayName.charAt(0).toUpperCase()}

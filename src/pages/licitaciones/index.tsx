@@ -8,6 +8,11 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Plus, Eye, Edit2, Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import {
+  ESTADO_REQUERIMIENTO_LABELS,
+  ESTADOS_EDITABLES,
+  type EstadoRequerimiento,
+} from '@/lib/licitacionRules'
 
 interface Licitacion {
   id: string
@@ -33,23 +38,20 @@ export default function LicitacionesPage() {
       return
     }
 
-    if (user) {
+    if (user && profile?.municipio_id) {
       fetchLicitaciones()
+    } else if (user && !authLoading) {
+      setLoading(false)
     }
   }, [user, authLoading, profile, router])
 
   const fetchLicitaciones = async () => {
     try {
-      let query = supabase
+      const query = supabase
         .from('licitaciones')
         .select('*')
+        .eq('municipio_id', profile?.municipio_id)
         .order('created_at', { ascending: false })
-
-      // Filtrar por el municipio del usuario (UUID). Si aún no cargó el perfil,
-      // RLS igualmente limita los datos visibles al municipio autorizado.
-      if (profile?.municipio_id) {
-        query = query.eq('municipio_id', profile.municipio_id)
-      }
 
       const { data, error } = await query
 
@@ -57,6 +59,7 @@ export default function LicitacionesPage() {
       setLicitaciones(data || [])
     } catch (err) {
       console.error('Error fetching licitaciones:', err)
+      setLicitaciones([])
     } finally {
       setLoading(false)
     }
@@ -65,9 +68,12 @@ export default function LicitacionesPage() {
   const getEstadoBadge = (estado: string) => {
     const variants = {
       BORRADOR: 'default',
-      PUBLICADA: 'success',
-      EN_EVALUACION: 'info',
-      ADJUDICADA: 'warning',
+      EN_REVISION: 'info',
+      OBSERVADO: 'warning',
+      APROBADO_JURIDICO: 'success',
+      DECRETO_GENERADO: 'info',
+      LISTO_MERCADO_PUBLICO: 'success',
+      ARCHIVADO: 'default',
     }
     return variants[estado as keyof typeof variants] || 'default'
   }
@@ -79,7 +85,15 @@ export default function LicitacionesPage() {
       lic.numero.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-  const estadoOptions = ['BORRADOR', 'PUBLICADA', 'EN_EVALUACION', 'ADJUDICADA']
+  const estadoOptions: EstadoRequerimiento[] = [
+    'BORRADOR',
+    'EN_REVISION',
+    'OBSERVADO',
+    'APROBADO_JURIDICO',
+    'DECRETO_GENERADO',
+    'LISTO_MERCADO_PUBLICO',
+    'ARCHIVADO',
+  ]
 
   if (authLoading || !user) return null
 
@@ -143,7 +157,7 @@ export default function LicitacionesPage() {
                           : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-teal-300'
                       }`}
                     >
-                      {estado} ({count})
+                      {ESTADO_REQUERIMIENTO_LABELS[estado]} ({count})
                     </button>
                   )
                 )
@@ -191,7 +205,9 @@ export default function LicitacionesPage() {
                           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{lic.numero}</p>
                           <h3 className="text-lg font-bold text-gray-900 truncate">{lic.titulo}</h3>
                         </div>
-                        <Badge variant={getEstadoBadge(lic.estado) as any}>{lic.estado}</Badge>
+                        <Badge variant={getEstadoBadge(lic.estado) as any}>
+                          {ESTADO_REQUERIMIENTO_LABELS[lic.estado as EstadoRequerimiento] || lic.estado}
+                        </Badge>
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 py-4 border-t border-gray-200">
@@ -213,14 +229,16 @@ export default function LicitacionesPage() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 font-medium">Estado</p>
-                          <p className="text-sm font-bold text-gray-900 mt-1">{lic.estado}</p>
+                          <p className="text-sm font-bold text-gray-900 mt-1">
+                            {ESTADO_REQUERIMIENTO_LABELS[lic.estado as EstadoRequerimiento] || lic.estado}
+                          </p>
                         </div>
                       </div>
                     </div>
 
                     {/* Actions */}
                     <div className="flex gap-2 flex-shrink-0">
-                      {lic.estado === 'BORRADOR' && (
+                      {ESTADOS_EDITABLES.includes(lic.estado as EstadoRequerimiento) && (
                         <Button
                           size="sm"
                           variant="secondary"

@@ -11,6 +11,13 @@ import { ProgressBar } from '@/components/ProgressBar'
 import { DocumentosSection } from '@/components/DocumentosSection'
 import { supabase } from '@/lib/supabase'
 import { ChevronDown, ArrowLeft, Edit2, Trash2, Clock, User, MapPin, DollarSign } from 'lucide-react'
+import {
+  ESTADO_REQUERIMIENTO_LABELS,
+  ESTADO_REQUERIMIENTO_TRANSITIONS,
+  ESTADOS_DOCUMENTOS_EDITABLES,
+  ESTADOS_EDITABLES,
+  type EstadoRequerimiento,
+} from '@/lib/licitacionRules'
 
 interface Licitacion {
   id: string
@@ -28,22 +35,18 @@ interface Licitacion {
   created_by: string
 }
 
-const VALID_TRANSITIONS: { [key: string]: string[] } = {
-  BORRADOR: ['PUBLICADA'],
-  PUBLICADA: ['EN_EVALUACION'],
-  EN_EVALUACION: ['ADJUDICADA'],
-  ADJUDICADA: [],
-}
-
 const ESTADO_COLORS: { [key: string]: 'default' | 'success' | 'warning' | 'danger' | 'info' } = {
   BORRADOR: 'default',
-  PUBLICADA: 'success',
-  EN_EVALUACION: 'info',
-  ADJUDICADA: 'warning',
+  EN_REVISION: 'info',
+  OBSERVADO: 'warning',
+  APROBADO_JURIDICO: 'success',
+  DECRETO_GENERADO: 'info',
+  LISTO_MERCADO_PUBLICO: 'success',
+  ARCHIVADO: 'default',
 }
 
 export default function LicitacionDetailPage() {
-  const { user, municipioNombre } = useAuth()
+  const { user, profile, organismoNombre } = useAuth()
   const router = useRouter()
   const { id } = router.query
 
@@ -63,10 +66,10 @@ export default function LicitacionDetailPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
   useEffect(() => {
-    if (id) {
+    if (id && profile?.municipio_id) {
       fetchLicitacion()
     }
-  }, [id])
+  }, [id, profile?.municipio_id])
 
   const fetchLicitacion = async () => {
     try {
@@ -74,6 +77,7 @@ export default function LicitacionDetailPage() {
         .from('licitaciones')
         .select('*')
         .eq('id', id)
+        .eq('municipio_id', profile?.municipio_id)
         .single()
 
       if (fetchError) throw fetchError
@@ -93,7 +97,7 @@ export default function LicitacionDetailPage() {
   }
 
   const getValidTransitions = (estado: string): string[] => {
-    return VALID_TRANSITIONS[estado] || []
+    return ESTADO_REQUERIMIENTO_TRANSITIONS[estado as EstadoRequerimiento] || []
   }
 
   const handleEstadoChange = (nuevoEstado: string) => {
@@ -180,14 +184,17 @@ export default function LicitacionDetailPage() {
       <>
         <Header />
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <p className="text-gray-600">Licitación no encontrada</p>
+          <p className="text-gray-600">Requerimiento no encontrado</p>
         </div>
       </>
     )
   }
 
-  const canEdit = licitacion.estado === 'BORRADOR'
+  const estadoActual = licitacion.estado as EstadoRequerimiento
+  const estadoLabel = ESTADO_REQUERIMIENTO_LABELS[estadoActual] || licitacion.estado
+  const canEdit = ESTADOS_EDITABLES.includes(estadoActual)
   const canDelete = licitacion.estado === 'BORRADOR'
+  const canEditDocuments = ESTADOS_DOCUMENTOS_EDITABLES.includes(estadoActual)
 
   return (
     <>
@@ -221,7 +228,7 @@ export default function LicitacionDetailPage() {
                 </p>
                 <h1 className="text-4xl font-bold text-gray-900 mb-2">{licitacion.titulo}</h1>
                 <div className="flex items-center gap-4 mt-3">
-                  <Badge variant={ESTADO_COLORS[licitacion.estado]}>{licitacion.estado}</Badge>
+                  <Badge variant={ESTADO_COLORS[licitacion.estado] || 'default'}>{estadoLabel}</Badge>
                   <span className="text-sm text-gray-600 flex items-center gap-1">
                     <Clock className="w-4 h-4" />
                     Creada: {new Date(licitacion.created_at).toLocaleDateString()}
@@ -258,7 +265,7 @@ export default function LicitacionDetailPage() {
                     <option value="">Cambiar estado...</option>
                     {getValidTransitions(licitacion.estado).map((estado) => (
                       <option key={estado} value={estado}>
-                        → {estado}
+                        {ESTADO_REQUERIMIENTO_LABELS[estado as EstadoRequerimiento] || estado}
                       </option>
                     ))}
                   </select>
@@ -273,7 +280,7 @@ export default function LicitacionDetailPage() {
             <>
               {/* Info Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <StatBadge icon="📍" label="Municipio" value={municipioNombre || '—'} variant="info" />
+                <StatBadge icon="📍" label="Organismo" value={organismoNombre || '—'} variant="info" />
                 <StatBadge icon="📦" label="Tipo" value={licitacion.tipo_licita} variant="primary" />
                 <StatBadge
                   icon="💰"
@@ -309,9 +316,9 @@ export default function LicitacionDetailPage() {
                     <p className="text-lg font-bold text-gray-900 mt-1">{licitacion.tipo_licita}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 font-medium">Municipio</p>
+                    <p className="text-sm text-gray-600 font-medium">Organismo</p>
                     <p className="text-lg font-bold text-gray-900 mt-1">
-                      {municipioNombre || '—'}
+                      {organismoNombre || '—'}
                     </p>
                   </div>
                 </div>
@@ -404,8 +411,9 @@ export default function LicitacionDetailPage() {
           <div className="mt-6">
             <DocumentosSection
               licitacionId={licitacion.id}
+              organismoId={licitacion.municipio_id}
               userId={user?.id}
-              canEdit={licitacion.estado !== 'ADJUDICADA'}
+              canEdit={canEditDocuments}
             />
           </div>
 
@@ -438,8 +446,8 @@ export default function LicitacionDetailPage() {
           <div className="bg-white rounded-lg p-6 max-w-sm">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Cambiar Estado</h3>
             <p className="text-gray-600 mb-4">
-              ¿Deseas cambiar el estado de <strong>{licitacion.estado}</strong> a{' '}
-              <strong>{pendingEstado}</strong>?
+              ¿Deseas cambiar el estado de <strong>{estadoLabel}</strong> a{' '}
+              <strong>{ESTADO_REQUERIMIENTO_LABELS[pendingEstado as EstadoRequerimiento] || pendingEstado}</strong>?
             </p>
             <p className="text-sm text-gray-500 mb-6">
               Este cambio quedará registrado en la trazabilidad del requerimiento.

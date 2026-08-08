@@ -12,6 +12,43 @@
 export const UTM_CLP = 68000
 
 export type TipoCompra = 'Infraestructura' | 'Suministros' | 'Servicios' | 'Consultoría'
+export type EstadoRequerimiento =
+  | 'BORRADOR'
+  | 'EN_REVISION'
+  | 'OBSERVADO'
+  | 'APROBADO_JURIDICO'
+  | 'DECRETO_GENERADO'
+  | 'LISTO_MERCADO_PUBLICO'
+  | 'ARCHIVADO'
+
+export const ESTADO_REQUERIMIENTO_LABELS: Record<EstadoRequerimiento, string> = {
+  BORRADOR: 'Borrador',
+  EN_REVISION: 'En revisión interna',
+  OBSERVADO: 'Observado',
+  APROBADO_JURIDICO: 'Aprobado jurídico',
+  DECRETO_GENERADO: 'Decreto generado',
+  LISTO_MERCADO_PUBLICO: 'Listo para Mercado Público',
+  ARCHIVADO: 'Archivado',
+}
+
+export const ESTADO_REQUERIMIENTO_TRANSITIONS: Record<EstadoRequerimiento, EstadoRequerimiento[]> = {
+  BORRADOR: ['EN_REVISION'],
+  EN_REVISION: ['OBSERVADO', 'APROBADO_JURIDICO'],
+  OBSERVADO: ['EN_REVISION'],
+  APROBADO_JURIDICO: ['DECRETO_GENERADO'],
+  DECRETO_GENERADO: ['LISTO_MERCADO_PUBLICO'],
+  LISTO_MERCADO_PUBLICO: ['ARCHIVADO'],
+  ARCHIVADO: [],
+}
+
+export const ESTADOS_EDITABLES: EstadoRequerimiento[] = ['BORRADOR', 'OBSERVADO']
+export const ESTADOS_DOCUMENTOS_EDITABLES: EstadoRequerimiento[] = [
+  'BORRADOR',
+  'OBSERVADO',
+  'EN_REVISION',
+  'APROBADO_JURIDICO',
+  'DECRETO_GENERADO',
+]
 
 export interface Clasificacion {
   codigo: 'L1' | 'LE' | 'LP' | 'LQ' | 'LR'
@@ -168,6 +205,36 @@ export function validarGarantiaCumplimiento(
   const p = Number(porcentaje)
   if (Number.isNaN(p) || p < 5 || p > 30) {
     return 'La garantía de fiel cumplimiento debe estar entre 5% y 30%'
+  }
+  return null
+}
+
+/**
+ * Valida la garantía de seriedad de la oferta cuando el tramo LR la exige.
+ */
+export function validarGarantiaSeriedad(
+  clasif: Clasificacion | null,
+  porcentaje: number | null | undefined
+): string | null {
+  if (!clasif?.garantiaSeriedadObligatoria) return null
+  if (porcentaje == null || porcentaje === ('' as any)) {
+    return 'La garantía de seriedad de la oferta es obligatoria para procesos LR'
+  }
+  const p = Number(porcentaje)
+  if (Number.isNaN(p) || p < 2 || p > 5) {
+    return 'La garantía de seriedad debe estar entre 2% y 5%'
+  }
+  return null
+}
+
+export function validarPonderaciones(
+  precio: number,
+  tecnica: number,
+  plazo: number
+): string | null {
+  const total = precio + tecnica + plazo
+  if (Math.abs(total - 100) > 0.01) {
+    return `Las ponderaciones deben sumar 100%. Suma actual: ${total.toFixed(2)}%`
   }
   return null
 }

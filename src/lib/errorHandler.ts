@@ -19,39 +19,15 @@ export const errors = {
   LICITACION_NOT_FOUND: () =>
     new KevanzaError(
       'LICITACION_NOT_FOUND',
-      'Licitación no encontrada en BD',
+      'Requerimiento no encontrado en BD',
       404,
-      'La licitación que buscas no existe'
+      'El requerimiento que buscas no existe'
     ),
 
-  OFERTA_NOT_FOUND: () =>
+  INVALID_PONDERACIONES: () =>
     new KevanzaError(
-      'OFERTA_NOT_FOUND',
-      'Oferta no encontrada en BD',
-      404,
-      'La oferta que buscas no existe'
-    ),
-
-  OFERTA_SAVE_FAILED: (err: any) =>
-    new KevanzaError(
-      'OFERTA_SAVE_FAILED',
-      `Error guardando oferta: ${err.message}`,
-      500,
-      'Error al guardar la oferta. Intenta de nuevo.'
-    ),
-
-  PUNTAJE_UPDATE_FAILED: (err: any) =>
-    new KevanzaError(
-      'PUNTAJE_UPDATE_FAILED',
-      `Error actualizando puntajes: ${err.message}`,
-      500,
-      'Error al guardar evaluación. Intenta de nuevo.'
-    ),
-
-  INVALID_PUNTAJES: () =>
-    new KevanzaError(
-      'INVALID_PUNTAJES',
-      'Puntajes no suman 100%',
+      'INVALID_PONDERACIONES',
+      'Ponderaciones no suman 100%',
       400,
       'La suma de ponderaciones debe ser exactamente 100%'
     ),

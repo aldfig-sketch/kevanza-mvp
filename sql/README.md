@@ -1,39 +1,18 @@
 # Migraciones SQL para KEVANZA MVP
 
-## Setup Tabla Ofertas
+KEVANZA gestiona requerimientos y bases internas antes de Mercado Publico. No recibe ofertas.
 
-### Pasos:
+Orden recomendado:
 
-1. Ve a **Supabase Dashboard** → tu proyecto (ibgxezibscvdyjpxlglv)
-2. Click **SQL Editor**
-3. Click **New Query**
-4. Copia TODO el contenido de `001-create-ofertas-table.sql`
-5. Pega en el editor
-6. Click **Run**
-7. ✅ Si no hay errores: listo
+1. `001-retire-ofertas.sql`
+2. `002-create-documentos-table.sql`
+3. `003-add-bases-fields.sql`
+4. `supabase/migrations/20260808183654_pre_publicacion_hardening.sql`
 
-### Si hay error "table licitaciones does not exist":
-- Es normal si no ejecutaste migraciones previas
-- Verifica que la tabla licitaciones existe: `SELECT * FROM licitaciones LIMIT 1;`
-- Si no existe, crea las tablas básicas primero
+La migracion de hardening:
 
-### Qué hace el SQL:
-
-✅ Crea tabla `ofertas` con todas las columnas
-✅ Crea índices para búsquedas rápidas
-✅ Habilita Row Level Security (RLS)
-✅ Agrega columna `ponderacion_plazo` a `licitaciones`
-
-### Verificar que funcionó:
-
-```sql
--- Contar ofertas (debe retornar 0)
-SELECT COUNT(*) FROM ofertas;
-
--- Ver estructura
-\d ofertas;
-```
-
----
-
-**IMPORTANTE**: Ejecuta este SQL ANTES de probar el MVP. Sin esta tabla, la app no funcionará.
+- Retira tabla/policies/grants de `ofertas`.
+- Migra estados post-publicacion a estados internos.
+- Aisla `licitaciones` y `documentos` por organismo (`municipio_id` fisico).
+- Mantiene el bucket `documentos` privado.
+- Exige rutas de storage con prefijo `organismo_id/requerimiento_id/`.

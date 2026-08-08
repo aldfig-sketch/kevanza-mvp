@@ -18,16 +18,16 @@ interface EmailOptions {
  */
 export async function enviarEmailBienvenida(
   email: string,
-  nombreMunicipio: string,
+  nombreOrganismo: string,
   rol: string
 ): Promise<void> {
   const mailOptions: EmailOptions = {
     to: email,
-    subject: `Bienvenido a KEVANZA - ${nombreMunicipio}`,
+    subject: `Bienvenido a KEVANZA - ${nombreOrganismo}`,
     template: 'welcome',
     data: {
       email,
-      nombreMunicipio,
+      nombreOrganismo,
       rol,
       url: 'https://kevanza-mvp.vercel.app',
       cambiarContraseniaUrl: 'https://kevanza-mvp.vercel.app/auth/cambiar-contrasenia',
@@ -38,49 +38,21 @@ export async function enviarEmailBienvenida(
 }
 
 /**
- * Email: Nueva oferta recibida
+ * Email: Bases listas para Mercado Publico
  */
-export async function enviarEmailNuevaOferta(
+export async function enviarEmailBasesListas(
   emailAdmin: string,
-  nombreMunicipio: string,
-  numeroLicitacion: string,
-  nombreEmpresa: string,
-  precioOfertado: number
+  numeroRequerimiento: string,
+  titulo: string
 ): Promise<void> {
   const mailOptions: EmailOptions = {
     to: emailAdmin,
-    subject: `Nueva oferta recibida: ${numeroLicitacion}`,
-    template: 'new-offer',
+    subject: `Bases listas para Mercado Público: ${numeroRequerimiento}`,
+    template: 'bases-ready',
     data: {
-      nombreMunicipio,
-      numeroLicitacion,
-      nombreEmpresa,
-      precioOfertado,
-      url: `https://kevanza-mvp.vercel.app/licitaciones/${numeroLicitacion}/ofertas`,
-    },
-  }
-
-  await enviarEmail(mailOptions)
-}
-
-/**
- * Email: Evaluación completada
- */
-export async function enviarEmailEvaluacionCompletada(
-  emailAdmin: string,
-  numeroLicitacion: string,
-  nombreGanador: string,
-  puntajeGanador: number
-): Promise<void> {
-  const mailOptions: EmailOptions = {
-    to: emailAdmin,
-    subject: `Evaluación completada: ${numeroLicitacion}`,
-    template: 'evaluation-complete',
-    data: {
-      numeroLicitacion,
-      nombreGanador,
-      puntajeGanador,
-      url: `https://kevanza-mvp.vercel.app/licitaciones/${numeroLicitacion}`,
+      numeroRequerimiento,
+      titulo,
+      url: `https://kevanza-mvp.vercel.app/licitaciones/${numeroRequerimiento}`,
     },
   }
 

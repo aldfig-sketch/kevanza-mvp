@@ -7,7 +7,7 @@ export interface Licitacion {
   descripcion?: string
   estado: string
   tipo_licita: string
-  municipio_id: number
+  municipio_id: string
   presupuesto_total: number
   ponderacion_precio: number
   ponderacion_tecnica: number

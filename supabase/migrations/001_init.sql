@@ -4,10 +4,11 @@
 
 -- 1. MUNICIPIOS
 CREATE TABLE IF NOT EXISTS municipios (
-  id BIGSERIAL PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre TEXT NOT NULL UNIQUE,
   region TEXT,
   code TEXT UNIQUE,
+  activo BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -23,24 +24,24 @@ CREATE TABLE IF NOT EXISTS roles (
 CREATE TABLE IF NOT EXISTS usuarios (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL UNIQUE,
-  full_name TEXT,
-  municipio_id BIGINT REFERENCES municipios(id),
-  role_id BIGINT REFERENCES roles(id) DEFAULT 1,
-  is_active BOOLEAN DEFAULT true,
+  nombre TEXT,
+  municipio_id UUID REFERENCES municipios(id),
+  rol TEXT DEFAULT 'USUARIO',
+  activo BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- 4. LICITACIONES
 CREATE TABLE IF NOT EXISTS licitaciones (
-  id BIGSERIAL PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   numero TEXT NOT NULL UNIQUE,
   titulo TEXT NOT NULL,
   descripcion TEXT,
-  municipio_id BIGINT REFERENCES municipios(id) NOT NULL,
+  municipio_id UUID REFERENCES municipios(id) NOT NULL,
   created_by UUID REFERENCES auth.users(id),
 
-  -- Estados: BORRADOR, PUBLICADA, EVALUACION, ADJUDICADA
+  -- Estados internos previos a Mercado Publico
   estado TEXT DEFAULT 'BORRADOR',
 
   -- Tipo de licitación
@@ -48,15 +49,19 @@ CREATE TABLE IF NOT EXISTS licitaciones (
 
   -- Presupuesto
   presupuesto_total DECIMAL(15, 2),
+  clasificacion VARCHAR(4),
+  porcentaje_seriedad DECIMAL(5, 2),
+  porcentaje_cumplimiento DECIMAL(5, 2),
+  plazo_ejecucion_dias INTEGER,
+  incluye_impuestos BOOLEAN DEFAULT true,
 
   -- Ponderaciones (deben sumar 100)
   ponderacion_precio DECIMAL(5, 2) DEFAULT 0,
   ponderacion_tecnica DECIMAL(5, 2) DEFAULT 0,
-  ponderacion_experiencia DECIMAL(5, 2) DEFAULT 0,
-  ponderacion_otro DECIMAL(5, 2) DEFAULT 0,
+  ponderacion_plazo DECIMAL(5, 2) DEFAULT 0,
 
   -- Campos adicionales (JSON para flexibilidad)
-  campos_adicionales JSONB,
+  datos_bases JSONB DEFAULT '{}'::jsonb,
 
   published_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
@@ -68,7 +73,7 @@ CREATE TABLE IF NOT EXISTS licitaciones (
 -- =====================================================
 
 -- Municipios
-INSERT INTO municipios (name, region, code) VALUES
+INSERT INTO municipios (nombre, region, code) VALUES
   ('Pucón', 'La Araucanía', 'PUCON'),
   ('Villarrica', 'La Araucanía', 'VILLARRICA'),
   ('Temuco', 'La Araucanía', 'TEMUCO')
@@ -112,16 +117,58 @@ CREATE POLICY "Users can update own data"
 
 -- Políticas para LICITACIONES
 CREATE POLICY "Licitaciones readable by authenticated"
-  ON licitaciones FOR SELECT
-  USING (auth.role() = 'authenticated');
+  ON licitaciones FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM usuarios u
+      WHERE u.id = (SELECT auth.uid())
+        AND u.municipio_id = licitaciones.municipio_id
+        AND coalesce(u.activo, true) = true
+    )
+  );
 
 CREATE POLICY "Licitaciones creatable by authenticated"
-  ON licitaciones FOR INSERT
-  WITH CHECK (auth.uid() = created_by AND auth.role() = 'authenticated');
+  ON licitaciones FOR INSERT TO authenticated
+  WITH CHECK (
+    created_by = (SELECT auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM usuarios u
+      WHERE u.id = (SELECT auth.uid())
+        AND u.municipio_id = licitaciones.municipio_id
+        AND coalesce(u.activo, true) = true
+    )
+  );
 
-CREATE POLICY "Licitaciones updatable by creator"
-  ON licitaciones FOR UPDATE
-  USING (auth.uid() = created_by);
+CREATE POLICY "Licitaciones updatable by same organism"
+  ON licitaciones FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM usuarios u
+      WHERE u.id = (SELECT auth.uid())
+        AND u.municipio_id = licitaciones.municipio_id
+        AND coalesce(u.activo, true) = true
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM usuarios u
+      WHERE u.id = (SELECT auth.uid())
+        AND u.municipio_id = licitaciones.municipio_id
+        AND coalesce(u.activo, true) = true
+    )
+  );
+
+CREATE POLICY "Licitaciones deletable by same organism in draft"
+  ON licitaciones FOR DELETE TO authenticated
+  USING (
+    estado = 'BORRADOR'
+    AND EXISTS (
+      SELECT 1 FROM usuarios u
+      WHERE u.id = (SELECT auth.uid())
+        AND u.municipio_id = licitaciones.municipio_id
+        AND coalesce(u.activo, true) = true
+    )
+  );
 
 -- =====================================================
 -- ÍNDICES PARA PERFORMANCE
@@ -131,4 +178,4 @@ CREATE INDEX idx_licitaciones_municipio ON licitaciones(municipio_id);
 CREATE INDEX idx_licitaciones_created_by ON licitaciones(created_by);
 CREATE INDEX idx_licitaciones_estado ON licitaciones(estado);
 CREATE INDEX idx_usuarios_municipio ON usuarios(municipio_id);
-CREATE INDEX idx_usuarios_role ON usuarios(role_id);
+CREATE INDEX idx_usuarios_role ON usuarios(rol);

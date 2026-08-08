@@ -12,17 +12,17 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
   const steps = [
     {
       title: '✨ Bienvenido a KEVANZA',
-      description: 'La plataforma moderna para gestionar licitaciones públicas en municipios chilenos.',
+      description: 'La plataforma moderna para gestionar requerimientos y bases de compra pública.',
       action: 'Siguiente',
     },
     {
-      title: '📋 Crea Licitaciones',
+      title: '📋 Crea requerimientos',
       description: 'Ingresa todos los detalles: presupuesto, criterios de evaluación, tipos de compra.',
       action: 'Siguiente',
     },
     {
       title: '📊 Monitorea en Tiempo Real',
-      description: 'Visualiza gráficos, estadísticas y el estado de todas tus licitaciones en el dashboard.',
+      description: 'Visualiza gráficos, estadísticas y el estado de todos tus requerimientos en el dashboard.',
       action: '¡Empezar!',
     },
   ]

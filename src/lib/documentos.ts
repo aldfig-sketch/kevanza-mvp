@@ -29,6 +29,7 @@ function sanitizeName(name: string): string {
  */
 export async function subirDocumento(
   licitacionId: string,
+  organismoId: string,
   categoria: CategoriaDocumento,
   file: File,
   userId?: string
@@ -50,7 +51,7 @@ export async function subirDocumento(
   const version = (previas && previas[0]?.version ? previas[0].version : 0) + 1
 
   const safe = sanitizeName(file.name)
-  const storage_path = `${licitacionId}/${categoria}/v${version}-${Date.now()}-${safe}`
+  const storage_path = `${organismoId}/${licitacionId}/${categoria}/v${version}-${Date.now()}-${safe}`
 
   const { error: upErr } = await supabase.storage.from(BUCKET).upload(storage_path, file, {
     cacheControl: '3600',
@@ -135,9 +136,9 @@ export async function urlDescarga(
  * Elimina un documento (archivo + registro).
  */
 export async function eliminarDocumento(doc: Documento, userId?: string): Promise<void> {
-  await supabase.storage.from(BUCKET).remove([doc.storage_path])
   const { error } = await supabase.from('documentos').delete().eq('id', doc.id)
   if (error) throw error
+  await supabase.storage.from(BUCKET).remove([doc.storage_path])
 
   if (userId) {
     await auditLog.deletedRecord(userId, 'documentos', doc.id)

@@ -81,7 +81,7 @@ export default function SignupPage() {
             </div>
             <div className="text-left">
               <h1 className="text-2xl font-bold text-white">KEVANZA</h1>
-              <p className="text-xs text-teal-200">Licitaciones Municipales</p>
+              <p className="text-xs text-teal-200">Gestión de compras públicas</p>
             </div>
           </div>
           <p className="text-teal-100">Crea tu cuenta para comenzar</p>
@@ -227,7 +227,7 @@ export default function SignupPage() {
 
         {/* Footer */}
         <p className="text-center text-teal-200 text-xs">
-          © 2026 KEVANZA • Plataforma para municipios chilenos
+          © 2026 KEVANZA • Plataforma para organismos sujetos a Ley de Compras Públicas
         </p>
       </div>
     </div>

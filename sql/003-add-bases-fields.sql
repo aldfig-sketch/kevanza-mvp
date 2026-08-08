@@ -3,7 +3,50 @@
 
 ALTER TABLE public.licitaciones
   ADD COLUMN IF NOT EXISTS clasificacion varchar(4),          -- L1 | LE | LP | LQ | LR (por UTM)
+  ADD COLUMN IF NOT EXISTS porcentaje_seriedad numeric(5,2), -- garantía seriedad oferta
   ADD COLUMN IF NOT EXISTS porcentaje_cumplimiento numeric(5,2), -- garantía fiel cumplimiento
   ADD COLUMN IF NOT EXISTS plazo_ejecucion_dias integer,
   ADD COLUMN IF NOT EXISTS incluye_impuestos boolean DEFAULT true,
   ADD COLUMN IF NOT EXISTS datos_bases jsonb DEFAULT '{}'::jsonb; -- campos específicos por tipo
+
+UPDATE public.licitaciones
+SET estado = CASE estado
+  WHEN 'PUBLICADA' THEN 'LISTO_MERCADO_PUBLICO'
+  WHEN 'EN_EVALUACION' THEN 'EN_REVISION'
+  WHEN 'ADJUDICADA' THEN 'ARCHIVADO'
+  ELSE estado
+END
+WHERE estado IN ('PUBLICADA', 'EN_EVALUACION', 'ADJUDICADA');
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_licitaciones_estado_pre_publicacion'
+  ) THEN
+    ALTER TABLE public.licitaciones
+      ADD CONSTRAINT chk_licitaciones_estado_pre_publicacion
+      CHECK (estado IN (
+        'BORRADOR',
+        'EN_REVISION',
+        'OBSERVADO',
+        'APROBADO_JURIDICO',
+        'DECRETO_GENERADO',
+        'LISTO_MERCADO_PUBLICO',
+        'ARCHIVADO'
+      ));
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_licitaciones_garantias_rango'
+  ) THEN
+    ALTER TABLE public.licitaciones
+      ADD CONSTRAINT chk_licitaciones_garantias_rango
+      CHECK (
+        (porcentaje_seriedad IS NULL OR porcentaje_seriedad BETWEEN 0 AND 5)
+        AND (porcentaje_cumplimiento IS NULL OR porcentaje_cumplimiento BETWEEN 0 AND 30)
+      );
+  END IF;
+END $$;

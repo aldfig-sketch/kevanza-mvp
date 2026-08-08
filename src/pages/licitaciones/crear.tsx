@@ -12,12 +12,14 @@ import {
   CAMPOS_POR_TIPO,
   validarCamposTipo,
   validarGarantiaCumplimiento,
+  validarGarantiaSeriedad,
+  validarPonderaciones,
   formatUTM,
   type TipoCompra,
 } from '@/lib/licitacionRules'
 
 export default function CrearLicitacionPage() {
-  const { user, profile, municipioNombre } = useAuth()
+  const { user, profile, organismoNombre } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,6 +31,7 @@ export default function CrearLicitacionPage() {
     descripcion: '',
     tipo_licita: 'Infraestructura',
     presupuesto_total: '',
+    porcentaje_seriedad: '',
     porcentaje_cumplimiento: '',
     plazo_ejecucion_dias: '',
     ponderacion_precio: '',
@@ -81,26 +84,39 @@ export default function CrearLicitacionPage() {
   const ponderacionesTotal = getPonderacionesTotal()
   const ponderacionesValidas = Math.abs(ponderacionesTotal - 100) < 0.01
 
-  const handleSubmit = async (e: React.FormEvent, publish = false) => {
+  const handleSubmit = async (e: React.FormEvent, marcarListo = false) => {
     e.preventDefault()
     setError(null)
 
-    // Al publicar, las ponderaciones deben sumar exactamente 100%
     const algunaPonderacion =
       formData.ponderacion_precio || formData.ponderacion_tecnica || formData.ponderacion_plazo
-    if ((publish || algunaPonderacion) && !ponderacionesValidas) {
-      setError(`Las ponderaciones deben sumar 100%. Suma actual: ${ponderacionesTotal.toFixed(2)}%`)
+    const errPonderaciones = validarPonderaciones(
+      parseFloat(formData.ponderacion_precio) || 0,
+      parseFloat(formData.ponderacion_tecnica) || 0,
+      parseFloat(formData.ponderacion_plazo) || 0
+    )
+    if ((marcarListo || algunaPonderacion) && errPonderaciones) {
+      setError(errPonderaciones)
       setOpenSections((prev) => ({ ...prev, ponderaciones: true }))
       return
     }
 
     if (!profile?.municipio_id) {
-      setError('No se pudo determinar tu municipio. Recarga la página e intenta de nuevo.')
+      setError('No se pudo determinar tu organismo. Recarga la página e intenta de nuevo.')
       return
     }
 
-    // Validaciones normativas al publicar (spec Ley 19.886)
-    if (publish) {
+    // Validaciones normativas antes de marcar listo para Mercado Público.
+    if (marcarListo) {
+      const errSeriedad = validarGarantiaSeriedad(
+        clasificacion,
+        formData.porcentaje_seriedad ? parseFloat(formData.porcentaje_seriedad) : null
+      )
+      if (errSeriedad) {
+        setError(errSeriedad)
+        setOpenSections((prev) => ({ ...prev, presupuesto: true }))
+        return
+      }
       const errGarantia = validarGarantiaCumplimiento(
         clasificacion,
         formData.porcentaje_cumplimiento ? parseFloat(formData.porcentaje_cumplimiento) : null
@@ -130,6 +146,9 @@ export default function CrearLicitacionPage() {
           tipo_licita: formData.tipo_licita,
           presupuesto_total: parseFloat(formData.presupuesto_total) || 0,
           clasificacion: clasificacion?.codigo || null,
+          porcentaje_seriedad: formData.porcentaje_seriedad
+            ? parseFloat(formData.porcentaje_seriedad)
+            : null,
           porcentaje_cumplimiento: formData.porcentaje_cumplimiento
             ? parseFloat(formData.porcentaje_cumplimiento)
             : null,
@@ -140,9 +159,9 @@ export default function CrearLicitacionPage() {
           ponderacion_precio: parseFloat(formData.ponderacion_precio) || 0,
           ponderacion_tecnica: parseFloat(formData.ponderacion_tecnica) || 0,
           ponderacion_plazo: parseFloat(formData.ponderacion_plazo) || 0,
-          estado: publish ? 'PUBLICADA' : 'BORRADOR',
+          estado: marcarListo ? 'LISTO_MERCADO_PUBLICO' : 'BORRADOR',
           created_by: user?.id,
-          published_at: publish ? new Date().toISOString() : null,
+          published_at: marcarListo ? new Date().toISOString() : null,
         },
       ])
 
@@ -153,7 +172,7 @@ export default function CrearLicitacionPage() {
         router.push('/licitaciones')
       }, 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear licitación')
+      setError(err instanceof Error ? err.message : 'Error al crear requerimiento')
     } finally {
       setLoading(false)
     }
@@ -191,7 +210,7 @@ export default function CrearLicitacionPage() {
 
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">Nuevo requerimiento de compra</h1>
-            <p className="text-gray-600">Registra el requerimiento interno antes de publicarlo en Mercado Público</p>
+            <p className="text-gray-600">Registra el requerimiento interno antes de derivarlo a Mercado Público</p>
           </div>
 
           {/* Error Alert */}
@@ -278,7 +297,7 @@ export default function CrearLicitacionPage() {
                     />
                   </div>
 
-                  {/* Tipo y Municipio */}
+                  {/* Tipo y organismo */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -300,14 +319,14 @@ export default function CrearLicitacionPage() {
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Municipio
+                        Organismo
                       </label>
                       <div className="w-full px-4 py-2.5 border-2 border-gray-100 bg-gray-50 rounded-lg text-gray-700 flex items-center gap-2">
                         <span>📍</span>
-                        <span className="font-medium">{municipioNombre || 'Tu municipio'}</span>
+                        <span className="font-medium">{organismoNombre || 'Tu organismo'}</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        Se asigna automáticamente a tu municipio
+                        Se asigna automáticamente a tu organismo
                       </p>
                     </div>
                   </div>
@@ -383,28 +402,52 @@ export default function CrearLicitacionPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Garantía fiel cumplimiento (%)
-                        {clasificacion?.garantiaCumplimientoObligatoria && (
+                        Garantía de seriedad (%)
+                        {clasificacion?.garantiaSeriedadObligatoria && (
                           <span className="text-red-600"> *</span>
                         )}
                       </label>
                       <input
                         type="number"
-                        name="porcentaje_cumplimiento"
-                        value={formData.porcentaje_cumplimiento}
+                        name="porcentaje_seriedad"
+                        value={formData.porcentaje_seriedad}
                         onChange={handleChange}
                         min="0"
-                        max="30"
+                        max="5"
                         step="0.01"
-                        placeholder="5"
+                        placeholder="2"
                         className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 transition-colors"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        {clasificacion?.garantiaCumplimientoObligatoria
-                          ? 'Obligatoria: 5% – 30%'
+                        {clasificacion?.garantiaSeriedadObligatoria
+                          ? 'Obligatoria para LR: 2% – 5%'
                           : 'Opcional según monto'}
                       </p>
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      Garantía fiel cumplimiento (%)
+                      {clasificacion?.garantiaCumplimientoObligatoria && (
+                        <span className="text-red-600"> *</span>
+                      )}
+                    </label>
+                    <input
+                      type="number"
+                      name="porcentaje_cumplimiento"
+                      value={formData.porcentaje_cumplimiento}
+                      onChange={handleChange}
+                      min="0"
+                      max="30"
+                      step="0.01"
+                      placeholder="5"
+                      className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 transition-colors"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {clasificacion?.garantiaCumplimientoObligatoria
+                        ? 'Obligatoria: 5% - 30%'
+                        : 'Opcional según monto'}
+                    </p>
                   </div>
                 </div>
               )}
@@ -572,7 +615,7 @@ export default function CrearLicitacionPage() {
                 onClick={(e) => handleSubmit(e as any, true)}
                 disabled={loading}
               >
-                Publicar ahora
+                Marcar listo para Mercado Público
               </Button>
               <Button type="submit" size="lg" isLoading={loading}>
                 Guardar como borrador

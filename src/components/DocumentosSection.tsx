@@ -12,6 +12,7 @@ import { FileText, Upload, Download, Trash2, Loader2, Shield } from 'lucide-reac
 
 interface Props {
   licitacionId: string
+  organismoId: string
   userId?: string
   canEdit?: boolean
 }
@@ -29,7 +30,7 @@ function formatBytes(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export function DocumentosSection({ licitacionId, userId, canEdit = true }: Props) {
+export function DocumentosSection({ licitacionId, organismoId, userId, canEdit = true }: Props) {
   const [docs, setDocs] = useState<Documento[]>([])
   const [loading, setLoading] = useState(true)
   const [uploadingCat, setUploadingCat] = useState<CategoriaDocumento | null>(null)
@@ -56,7 +57,7 @@ export function DocumentosSection({ licitacionId, userId, canEdit = true }: Prop
     setError(null)
     setUploadingCat(categoria)
     try {
-      await subirDocumento(licitacionId, categoria, file, userId)
+      await subirDocumento(licitacionId, organismoId, categoria, file, userId)
       await cargar()
     } catch (err: any) {
       setError(err?.message || 'Error al subir el documento')

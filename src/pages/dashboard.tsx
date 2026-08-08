@@ -14,21 +14,21 @@ import { supabase } from '@/lib/supabase'
 interface DashboardStats {
   total: number
   borrador: number
-  publicada: number
-  evaluacion: number
-  adjudicada: number
+  revision: number
+  aprobacion: number
+  listoMercadoPublico: number
   byType: { [key: string]: number }
 }
 
 export default function DashboardPage() {
-  const { user, profile, municipioNombre, loading: authLoading } = useAuth()
+  const { user, profile, organismoNombre, loading: authLoading } = useAuth()
   const router = useRouter()
   const [stats, setStats] = useState<DashboardStats>({
     total: 0,
     borrador: 0,
-    publicada: 0,
-    evaluacion: 0,
-    adjudicada: 0,
+    revision: 0,
+    aprobacion: 0,
+    listoMercadoPublico: 0,
     byType: {},
   })
   const [loadingStats, setLoadingStats] = useState(true)
@@ -40,17 +40,19 @@ export default function DashboardPage() {
   }, [user, authLoading, router])
 
   useEffect(() => {
-    if (user) {
+    if (user && profile?.municipio_id) {
       fetchStats()
+    } else if (user && !authLoading) {
+      setLoadingStats(false)
     }
-  }, [user, profile])
+  }, [user, profile?.municipio_id, authLoading])
 
   const fetchStats = async () => {
     try {
-      let query = supabase.from('licitaciones').select('estado,tipo_licita')
-      if (profile?.municipio_id) {
-        query = query.eq('municipio_id', profile.municipio_id)
-      }
+      const query = supabase
+        .from('licitaciones')
+        .select('estado,tipo_licita')
+        .eq('municipio_id', profile?.municipio_id)
       const { data, error } = await query
 
       if (error) throw error
@@ -65,9 +67,9 @@ export default function DashboardPage() {
       setStats({
         total: licitaciones.length,
         borrador: licitaciones.filter((l) => l.estado === 'BORRADOR').length,
-        publicada: licitaciones.filter((l) => l.estado === 'PUBLICADA').length,
-        evaluacion: licitaciones.filter((l) => l.estado === 'EN_EVALUACION').length,
-        adjudicada: licitaciones.filter((l) => l.estado === 'ADJUDICADA').length,
+        revision: licitaciones.filter((l) => ['EN_REVISION', 'OBSERVADO'].includes(l.estado)).length,
+        aprobacion: licitaciones.filter((l) => ['APROBADO_JURIDICO', 'DECRETO_GENERADO'].includes(l.estado)).length,
+        listoMercadoPublico: licitaciones.filter((l) => l.estado === 'LISTO_MERCADO_PUBLICO').length,
         byType,
       })
     } catch (err) {
@@ -101,9 +103,9 @@ export default function DashboardPage() {
 
   const donutData = [
     { name: 'Borrador', value: stats.borrador, color: '#94a3b8' },
-    { name: 'Publicada', value: stats.publicada, color: '#10b981' },
-    { name: 'Evaluación', value: stats.evaluacion, color: '#3b82f6' },
-    { name: 'Adjudicada', value: stats.adjudicada, color: '#f59e0b' },
+    { name: 'Revisión', value: stats.revision, color: '#3b82f6' },
+    { name: 'Aprobación', value: stats.aprobacion, color: '#f59e0b' },
+    { name: 'Listo MP', value: stats.listoMercadoPublico, color: '#10b981' },
   ].filter((d) => d.value > 0)
 
   const barData = Object.entries(stats.byType).map(([type, count]) => ({
@@ -123,7 +125,7 @@ export default function DashboardPage() {
                 Hola, {profile?.nombre || profile?.full_name || user.email?.split('@')[0]} 👋
               </h1>
               <p className="text-gray-600">
-                {municipioNombre ? `Municipalidad de ${municipioNombre}` : 'Panel de gestión de licitaciones'}
+                {organismoNombre || 'Panel de gestión de requerimientos'}
               </p>
             </div>
             <Link href="/licitaciones/crear">
@@ -163,8 +165,8 @@ export default function DashboardPage() {
             <Card className="p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-2">Publicadas</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.publicada}</p>
+                  <p className="text-sm font-medium text-gray-600 mb-2">En revisión</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.revision}</p>
                 </div>
                 <div className="p-3 bg-green-100 rounded-lg">
                   <CheckCircle className="w-6 h-6 text-green-600" />
@@ -175,8 +177,8 @@ export default function DashboardPage() {
             <Card className="p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-2">Evaluación</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.evaluacion}</p>
+                  <p className="text-sm font-medium text-gray-600 mb-2">Aprobación</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.aprobacion}</p>
                 </div>
                 <div className="p-3 bg-blue-100 rounded-lg">
                   <TrendingUp className="w-6 h-6 text-blue-600" />
@@ -187,8 +189,8 @@ export default function DashboardPage() {
             <Card className="p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-2">Adjudicadas</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.adjudicada}</p>
+                  <p className="text-sm font-medium text-gray-600 mb-2">Listos MP</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.listoMercadoPublico}</p>
                 </div>
                 <div className="p-3 bg-orange-100 rounded-lg">
                   <CheckCircle className="w-6 h-6 text-orange-600" />
