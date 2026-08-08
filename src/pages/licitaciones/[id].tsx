@@ -94,7 +94,7 @@ export default function LicitacionDetailPage() {
     }
   }
 
-  const toggleSection = (section: string) => {
+  const toggleSection = (section: 'general' | 'presupuesto' | 'evaluacion') => {
     setOpenSections((prev) => ({
       ...prev,
       [section]: !prev[section],
