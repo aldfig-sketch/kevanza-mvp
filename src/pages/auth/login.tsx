@@ -70,12 +70,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-900/80 to-slate-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-teal-400 to-cyan-400 rounded-xl flex items-center justify-center shadow-lg">
+          <div className="inline-flex items-center gap-3 mb-6 transform hover:scale-105 transition-transform duration-300">
+            <div className="w-12 h-12 bg-gradient-to-br from-teal-400 to-cyan-400 rounded-xl flex items-center justify-center shadow-xl">
               <span className="text-slate-900 font-bold text-lg">KV</span>
             </div>
             <div className="text-left">
@@ -83,11 +83,11 @@ export default function LoginPage() {
               <p className="text-xs text-teal-200">Licitaciones Municipales</p>
             </div>
           </div>
-          <p className="text-teal-100">Accede a tu plataforma de licitaciones</p>
+          <p className="text-teal-100/90">Accede a tu plataforma de licitaciones</p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8 mb-6">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 mb-6 border border-white/10">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* Error Alert */}
             {error && (
