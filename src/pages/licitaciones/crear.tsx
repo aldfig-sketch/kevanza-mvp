@@ -33,7 +33,7 @@ export default function CrearLicitacionPage() {
     ponderaciones: false,
   })
 
-  const toggleSection = (section: string) => {
+  const toggleSection = (section: 'basico' | 'presupuesto' | 'ponderaciones') => {
     setOpenSections((prev) => ({
       ...prev,
       [section]: !prev[section],
