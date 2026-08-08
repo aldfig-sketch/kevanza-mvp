@@ -1,4 +1,7 @@
 import { supabase } from './supabase'
+import { OfertaSchema, PuntajeSchema, type OfertaInput, type PuntajeInput } from './validators'
+import { KevanzaError, errors } from './errorHandler'
+import { auditLog } from './audit'
 
 export interface Oferta {
   id: string
@@ -17,22 +20,39 @@ export interface Oferta {
   updated_at: string
 }
 
-export async function crearOferta(oferta: {
-  licitacion_id: string
-  proveedor_nombre: string
-  proveedor_email: string
-  precio_ofertado: number
-  plazo_dias: number
-  descripcion_tecnica?: string
-}) {
-  const { data, error } = await supabase
-    .from('ofertas')
-    .insert([oferta])
-    .select()
-    .single()
+export async function crearOferta(
+  oferta: OfertaInput,
+  userId?: string
+) {
+  try {
+    // Validate input
+    const validated = OfertaSchema.parse(oferta)
 
-  if (error) throw error
-  return data as Oferta
+    // Insert into database
+    const { data, error } = await supabase
+      .from('ofertas')
+      .insert([
+        {
+          ...validated,
+          estado: 'RECIBIDA',
+          created_at: new Date().toISOString(),
+        },
+      ])
+      .select()
+      .single()
+
+    if (error) throw errors.OFERTA_SAVE_FAILED(error)
+
+    // Log audit
+    if (userId) {
+      await auditLog.createdRecord(userId, 'ofertas', data.id, validated)
+    }
+
+    return data as Oferta
+  } catch (error) {
+    if (error instanceof KevanzaError) throw error
+    throw errors.OFERTA_SAVE_FAILED(error)
+  }
 }
 
 export async function obtenerOfertasPorLicitacion(licitacionId: string) {
@@ -59,46 +79,103 @@ export async function obtenerOferta(ofertaId: string) {
 
 export async function actualizarPuntajeOferta(
   ofertaId: string,
-  puntajes: {
-    puntaje_precio: number
-    puntaje_tecnica: number
-    puntaje_plazo: number
-    ponderacion_precio: number
-    ponderacion_tecnica: number
-    ponderacion_plazo: number
-  }
+  puntajes: PuntajeInput,
+  userId?: string
 ) {
-  const puntaje_total =
-    (puntajes.puntaje_precio * puntajes.ponderacion_precio) / 100 +
-    (puntajes.puntaje_tecnica * puntajes.ponderacion_tecnica) / 100 +
-    (puntajes.puntaje_plazo * puntajes.ponderacion_plazo) / 100
+  try {
+    // Validate input
+    const validated = PuntajeSchema.parse(puntajes)
 
-  const { data, error } = await supabase
-    .from('ofertas')
-    .update({
-      puntaje_precio: puntajes.puntaje_precio,
-      puntaje_tecnica: puntajes.puntaje_tecnica,
-      puntaje_plazo: puntajes.puntaje_plazo,
-      puntaje_total: Math.round(puntaje_total * 100) / 100,
-      estado: 'EVALUADA',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', ofertaId)
-    .select()
-    .single()
+    // Calculate total (server-side, not trusting client)
+    const puntaje_total =
+      (validated.puntaje_precio * validated.ponderacion_precio) / 100 +
+      (validated.puntaje_tecnica * validated.ponderacion_tecnica) / 100 +
+      (validated.puntaje_plazo * validated.ponderacion_plazo) / 100
 
-  if (error) throw error
-  return data as Oferta
+    // Verify oferta exists first
+    const { data: ofertaActual, error: notFoundError } = await supabase
+      .from('ofertas')
+      .select('id, estado')
+      .eq('id', ofertaId)
+      .single()
+
+    if (notFoundError || !ofertaActual) {
+      throw errors.OFERTA_NOT_FOUND()
+    }
+
+    // Update with validated data
+    const { data, error } = await supabase
+      .from('ofertas')
+      .update({
+        puntaje_precio: validated.puntaje_precio,
+        puntaje_tecnica: validated.puntaje_tecnica,
+        puntaje_plazo: validated.puntaje_plazo,
+        puntaje_total: Math.round(puntaje_total * 100) / 100,
+        estado: 'EVALUADA',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', ofertaId)
+      .select()
+      .single()
+
+    if (error) throw errors.PUNTAJE_UPDATE_FAILED(error)
+
+    // Log audit
+    if (userId) {
+      await auditLog.updatedRecord(userId, 'ofertas', ofertaId, {
+        puntaje_total: Math.round(puntaje_total * 100) / 100,
+        estado: 'EVALUADA',
+      })
+    }
+
+    return data as Oferta
+  } catch (error) {
+    if (error instanceof KevanzaError) throw error
+    throw errors.PUNTAJE_UPDATE_FAILED(error)
+  }
 }
 
-export async function marcarGanadora(ofertaId: string) {
-  const { data, error } = await supabase
-    .from('ofertas')
-    .update({ estado: 'GANADORA', updated_at: new Date().toISOString() })
-    .eq('id', ofertaId)
-    .select()
-    .single()
+export async function marcarGanadora(ofertaId: string, userId?: string) {
+  try {
+    // Verify oferta exists
+    const { data: ofertaActual, error: notFoundError } = await supabase
+      .from('ofertas')
+      .select('id, licitacion_id, estado')
+      .eq('id', ofertaId)
+      .single()
 
-  if (error) throw error
-  return data as Oferta
+    if (notFoundError || !ofertaActual) {
+      throw errors.OFERTA_NOT_FOUND()
+    }
+
+    // Must be EVALUADA to become GANADORA
+    if (ofertaActual.estado !== 'EVALUADA') {
+      throw errors.INVALID_STATE_TRANSITION(ofertaActual.estado, 'GANADORA')
+    }
+
+    // Update
+    const { data, error } = await supabase
+      .from('ofertas')
+      .update({
+        estado: 'GANADORA',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', ofertaId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    // Log audit
+    if (userId) {
+      await auditLog.updatedRecord(userId, 'ofertas', ofertaId, {
+        estado: 'GANADORA',
+      })
+    }
+
+    return data as Oferta
+  } catch (error) {
+    if (error instanceof KevanzaError) throw error
+    throw errors.SERVER_ERROR(error)
+  }
 }
