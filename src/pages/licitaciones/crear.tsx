@@ -6,7 +6,15 @@ import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { Alert } from '@/components/Alert'
 import { supabase } from '@/lib/supabase'
-import { ChevronDown, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react'
+import { ChevronDown, ArrowLeft, CheckCircle2, AlertCircle, Scale } from 'lucide-react'
+import {
+  clasificarPorMonto,
+  CAMPOS_POR_TIPO,
+  validarCamposTipo,
+  validarGarantiaCumplimiento,
+  formatUTM,
+  type TipoCompra,
+} from '@/lib/licitacionRules'
 
 export default function CrearLicitacionPage() {
   const { user, profile, municipioNombre } = useAuth()
@@ -21,18 +29,24 @@ export default function CrearLicitacionPage() {
     descripcion: '',
     tipo_licita: 'Infraestructura',
     presupuesto_total: '',
+    porcentaje_cumplimiento: '',
+    plazo_ejecucion_dias: '',
     ponderacion_precio: '',
     ponderacion_tecnica: '',
     ponderacion_plazo: '',
   })
 
+  // Campos específicos según tipo de compra (datos_bases)
+  const [datosBases, setDatosBases] = useState<Record<string, any>>({})
+
   const [openSections, setOpenSections] = useState({
     basico: true,
     presupuesto: false,
+    especificos: false,
     ponderaciones: false,
   })
 
-  const toggleSection = (section: 'basico' | 'presupuesto' | 'ponderaciones') => {
+  const toggleSection = (section: 'basico' | 'presupuesto' | 'especificos' | 'ponderaciones') => {
     setOpenSections((prev) => ({
       ...prev,
       [section]: !prev[section],
@@ -46,6 +60,14 @@ export default function CrearLicitacionPage() {
       [name]: value,
     }))
   }
+
+  const handleCampoTipo = (name: string, value: any) => {
+    setDatosBases((prev) => ({ ...prev, [name]: value }))
+  }
+
+  // Clasificación por UTM (en vivo) y campos del tipo seleccionado
+  const clasificacion = clasificarPorMonto(parseFloat(formData.presupuesto_total) || 0)
+  const camposTipo = CAMPOS_POR_TIPO[formData.tipo_licita as TipoCompra] || []
 
   const getPonderacionesTotal = () => {
     const values = [
@@ -77,6 +99,25 @@ export default function CrearLicitacionPage() {
       return
     }
 
+    // Validaciones normativas al publicar (spec Ley 19.886)
+    if (publish) {
+      const errGarantia = validarGarantiaCumplimiento(
+        clasificacion,
+        formData.porcentaje_cumplimiento ? parseFloat(formData.porcentaje_cumplimiento) : null
+      )
+      if (errGarantia) {
+        setError(errGarantia)
+        setOpenSections((prev) => ({ ...prev, presupuesto: true }))
+        return
+      }
+      const erroresTipo = validarCamposTipo(formData.tipo_licita as TipoCompra, datosBases)
+      if (erroresTipo.length > 0) {
+        setError(`Faltan datos del tipo de compra: ${erroresTipo.join('; ')}`)
+        setOpenSections((prev) => ({ ...prev, especificos: true }))
+        return
+      }
+    }
+
     setLoading(true)
 
     try {
@@ -88,6 +129,14 @@ export default function CrearLicitacionPage() {
           municipio_id: profile.municipio_id,
           tipo_licita: formData.tipo_licita,
           presupuesto_total: parseFloat(formData.presupuesto_total) || 0,
+          clasificacion: clasificacion?.codigo || null,
+          porcentaje_cumplimiento: formData.porcentaje_cumplimiento
+            ? parseFloat(formData.porcentaje_cumplimiento)
+            : null,
+          plazo_ejecucion_dias: formData.plazo_ejecucion_dias
+            ? parseInt(formData.plazo_ejecucion_dias)
+            : null,
+          datos_bases: datosBases,
           ponderacion_precio: parseFloat(formData.ponderacion_precio) || 0,
           ponderacion_tecnica: parseFloat(formData.ponderacion_tecnica) || 0,
           ponderacion_plazo: parseFloat(formData.ponderacion_plazo) || 0,
@@ -287,7 +336,7 @@ export default function CrearLicitacionPage() {
               </button>
 
               {openSections.presupuesto && (
-                <div className="px-6 py-6">
+                <div className="px-6 py-6 space-y-5">
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
                       Presupuesto total ($)
@@ -297,16 +346,149 @@ export default function CrearLicitacionPage() {
                       name="presupuesto_total"
                       value={formData.presupuesto_total}
                       onChange={handleChange}
-                      placeholder="1000000"
+                      placeholder="45000000"
                       className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 transition-colors"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Sin restricción de monto</p>
+                    <p className="text-xs text-gray-500 mt-1">Monto máximo disponible (CLP)</p>
+                  </div>
+
+                  {/* Clasificación por UTM (en vivo) */}
+                  {clasificacion && (
+                    <div className="rounded-lg border-2 border-teal-200 bg-teal-50 p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Scale className="w-4 h-4 text-teal-700" />
+                        <span className="font-bold text-teal-900">{clasificacion.nombre}</span>
+                        <span className="text-xs text-teal-700">
+                          ≈ {formatUTM(clasificacion.montoUTM)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-teal-800">{clasificacion.nota}</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Plazo de ejecución (días)
+                      </label>
+                      <input
+                        type="number"
+                        name="plazo_ejecucion_dias"
+                        value={formData.plazo_ejecucion_dias}
+                        onChange={handleChange}
+                        min="1"
+                        placeholder="60"
+                        className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Garantía fiel cumplimiento (%)
+                        {clasificacion?.garantiaCumplimientoObligatoria && (
+                          <span className="text-red-600"> *</span>
+                        )}
+                      </label>
+                      <input
+                        type="number"
+                        name="porcentaje_cumplimiento"
+                        value={formData.porcentaje_cumplimiento}
+                        onChange={handleChange}
+                        min="0"
+                        max="30"
+                        step="0.01"
+                        placeholder="5"
+                        className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 transition-colors"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {clasificacion?.garantiaCumplimientoObligatoria
+                          ? 'Obligatoria: 5% – 30%'
+                          : 'Opcional según monto'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Sección 3: Ponderaciones */}
+            {/* Sección 3: Campos específicos del tipo */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200/50 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleSection('especificos')}
+                className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-200/50"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-600 text-white font-bold text-sm">
+                    3
+                  </div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Requisitos de {formData.tipo_licita}
+                  </h2>
+                </div>
+                <ChevronDown
+                  className={`w-5 h-5 text-gray-400 transition-transform ${
+                    openSections.especificos ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {openSections.especificos && (
+                <div className="px-6 py-6 space-y-5">
+                  <p className="text-sm text-gray-600 bg-amber-50 p-3 rounded-lg">
+                    Campos específicos exigidos para procesos de <strong>{formData.tipo_licita}</strong> (Ley 19.886).
+                  </p>
+                  {camposTipo.map((campo) => (
+                    <div key={campo.name}>
+                      {campo.tipo === 'boolean' ? (
+                        <label className="flex items-start gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!datosBases[campo.name]}
+                            onChange={(e) => handleCampoTipo(campo.name, e.target.checked)}
+                            className="mt-1 w-4 h-4 accent-teal-600"
+                          />
+                          <span>
+                            <span className="text-sm font-semibold text-gray-900">
+                              {campo.label}
+                              {campo.debeSer && <span className="text-red-600"> *</span>}
+                            </span>
+                            {campo.help && (
+                              <span className="block text-xs text-gray-500">{campo.help}</span>
+                            )}
+                          </span>
+                        </label>
+                      ) : (
+                        <>
+                          <label className="block text-sm font-semibold text-gray-900 mb-2">
+                            {campo.label}
+                            {campo.obligatorio && <span className="text-red-600"> *</span>}
+                            {campo.unidad && (
+                              <span className="text-gray-500 font-normal"> ({campo.unidad})</span>
+                            )}
+                          </label>
+                          <input
+                            type={campo.tipo === 'number' ? 'number' : 'text'}
+                            value={datosBases[campo.name] ?? ''}
+                            min={campo.min}
+                            max={campo.max}
+                            onChange={(e) =>
+                              handleCampoTipo(
+                                campo.name,
+                                campo.tipo === 'number' ? e.target.value : e.target.value
+                              )
+                            }
+                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 transition-colors"
+                          />
+                          {campo.help && <p className="text-xs text-gray-500 mt-1">{campo.help}</p>}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sección 4: Ponderaciones */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200/50 overflow-hidden">
               <button
                 type="button"
@@ -315,7 +497,7 @@ export default function CrearLicitacionPage() {
               >
                 <div className="flex items-center gap-4">
                   <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-600 text-white font-bold text-sm">
-                    3
+                    4
                   </div>
                   <h2 className="text-lg font-bold text-gray-900">Criterios de Evaluación</h2>
                 </div>
