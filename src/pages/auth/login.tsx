@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { signIn } from '@/lib/auth'
+import { Mail, Lock, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
   const {
     register,
@@ -32,83 +34,159 @@ export default function LoginPage() {
 
     try {
       await signIn(data.email, data.password)
-      const redirectTo = router.query.redirectTo as string
-      router.push(redirectTo || '/dashboard')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
+      setSuccess(true)
+      setTimeout(() => {
+        const redirectTo = router.query.redirectTo as string
+        router.push(redirectTo || '/licitaciones')
+      }, 1500)
+    } catch (err: any) {
+      if (err?.message?.includes('Invalid login credentials')) {
+        setError('Email o contraseña incorrectos')
+      } else if (err?.message?.includes('Failed to fetch')) {
+        setError('Error de conexión. Verifica tu conexión a internet')
+      } else if (err?.message?.includes('Network')) {
+        setError('Error de red. Intenta nuevamente en unos segundos')
+      } else {
+        setError(err?.message || 'Error al iniciar sesión')
+      }
+      console.error('Login error:', err)
     } finally {
       setLoading(false)
     }
   }
 
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="mb-6">
+            <CheckCircle2 className="w-16 h-16 text-teal-400 mx-auto" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">¡Bienvenido!</h2>
+          <p className="text-teal-200">Cargando tu sesión...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">KEVANZA</h1>
-          <p className="text-gray-600">Plataforma de Licitaciones Municipales</p>
-        </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-              {error}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-teal-400 to-cyan-400 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-slate-900 font-bold text-lg">KV</span>
             </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              {...register('email')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              placeholder="tu@email.com"
-            />
-            {errors.email && (
-              <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
-            )}
+            <div className="text-left">
+              <h1 className="text-2xl font-bold text-white">KEVANZA</h1>
+              <p className="text-xs text-teal-200">Licitaciones Municipales</p>
+            </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contraseña
-            </label>
-            <input
-              type="password"
-              {...register('password')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              placeholder="••••••••"
-            />
-            {errors.password && (
-              <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-          >
-            {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
-          </button>
-        </form>
-
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-center text-gray-600 text-sm">
-            ¿No tienes cuenta?{' '}
-            <Link href="/auth/signup" className="text-teal-600 hover:text-teal-700 font-medium">
-              Registrate aquí
-            </Link>
-          </p>
+          <p className="text-teal-100">Accede a tu plataforma de licitaciones</p>
         </div>
 
-        {/* Demo credentials for testing */}
-        <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
-          <p className="font-medium mb-1">Demo: (en desarrollo)</p>
-          <p>usuario@kevanza.test</p>
+        {/* Form Card */}
+        <div className="bg-white rounded-2xl shadow-2xl p-8 mb-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* Error Alert */}
+            {error && (
+              <div className="p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-900">Error de autenticación</p>
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Email Field */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                <input
+                  type="email"
+                  {...register('email')}
+                  className={`w-full pl-10 pr-4 py-2.5 border-2 rounded-lg focus:outline-none transition-all ${
+                    errors.email
+                      ? 'border-red-300 bg-red-50 text-red-900'
+                      : 'border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
+                  }`}
+                  placeholder="tu@email.com"
+                  disabled={loading}
+                />
+              </div>
+              {errors.email && (
+                <p className="text-sm text-red-600 mt-1.5">{errors.email.message}</p>
+              )}
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                Contraseña
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                <input
+                  type="password"
+                  {...register('password')}
+                  className={`w-full pl-10 pr-4 py-2.5 border-2 rounded-lg focus:outline-none transition-all ${
+                    errors.password
+                      ? 'border-red-300 bg-red-50 text-red-900'
+                      : 'border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
+                  }`}
+                  placeholder="••••••••"
+                  disabled={loading}
+                />
+              </div>
+              {errors.password && (
+                <p className="text-sm text-red-600 mt-1.5">{errors.password.message}</p>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg disabled:shadow-none flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Iniciando sesión...
+                </>
+              ) : (
+                'Iniciar sesión'
+              )}
+            </button>
+          </form>
+
+          {/* Signup Link */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <p className="text-center text-gray-600 text-sm">
+              ¿No tienes cuenta?{' '}
+              <Link href="/auth/signup" className="text-teal-600 hover:text-teal-700 font-semibold">
+                Crear cuenta
+              </Link>
+            </p>
+          </div>
         </div>
+
+        {/* Demo Info */}
+        <div className="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20">
+          <p className="text-xs font-medium text-teal-200 mb-2">Demo (en desarrollo)</p>
+          <p className="text-sm text-teal-50 font-mono">alexis@kevanza.test</p>
+          <p className="text-sm text-teal-50 font-mono">TempPassword123!</p>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center text-teal-200 text-xs mt-8">
+          © 2026 KEVANZA • Plataforma para municipios chilenos
+        </p>
       </div>
     </div>
   )
