@@ -34,6 +34,13 @@ const MUNICIPIOS: { [key: number]: string } = {
 
 const ESTADO_OPTIONS = ['BORRADOR', 'PUBLICADA', 'EN_EVALUACION', 'ADJUDICADA']
 
+const VALID_TRANSITIONS: { [key: string]: string[] } = {
+  BORRADOR: ['PUBLICADA'],
+  PUBLICADA: ['EN_EVALUACION'],
+  EN_EVALUACION: ['ADJUDICADA'],
+  ADJUDICADA: [],
+}
+
 const ESTADO_COLORS: { [key: string]: 'default' | 'success' | 'warning' | 'danger' | 'info' } = {
   BORRADOR: 'default',
   PUBLICADA: 'success',
@@ -58,6 +65,10 @@ export default function LicitacionDetailPage() {
   const [publishingModal, setPublishingModal] = useState(false)
   const [deleteModal, setDeleteModal] = useState(false)
   const [newEstado, setNewEstado] = useState('')
+  const [estadoModal, setEstadoModal] = useState(false)
+  const [pendingEstado, setPendingEstado] = useState('')
+  const [changingEstado, setChangingEstado] = useState(false)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
   useEffect(() => {
     if (id) {
@@ -111,23 +122,44 @@ export default function LicitacionDetailPage() {
     }
   }
 
-  const handleChangeEstado = async (nuevoEstado: string) => {
-    if (!licitacion) return
+  const getValidTransitions = (estado: string): string[] => {
+    return VALID_TRANSITIONS[estado] || []
+  }
 
-    setLoading(true)
+  const handleEstadoChange = (nuevoEstado: string) => {
+    if (!licitacion) return
+    const validTransitions = getValidTransitions(licitacion.estado)
+
+    if (!validTransitions.includes(nuevoEstado)) {
+      setError(`No se puede pasar de ${licitacion.estado} a ${nuevoEstado}`)
+      setNewEstado(licitacion.estado)
+      return
+    }
+
+    setPendingEstado(nuevoEstado)
+    setEstadoModal(true)
+  }
+
+  const confirmEstadoChange = async () => {
+    if (!licitacion || !pendingEstado) return
+
+    setChangingEstado(true)
     try {
       const { error: updateError } = await supabase
         .from('licitaciones')
-        .update({ estado: nuevoEstado })
+        .update({ estado: pendingEstado })
         .eq('id', licitacion.id)
 
       if (updateError) throw updateError
-      setLicitacion({ ...licitacion, estado: nuevoEstado })
-      setNewEstado(nuevoEstado)
+      setLicitacion({ ...licitacion, estado: pendingEstado })
+      setNewEstado(pendingEstado)
+      setEstadoModal(false)
+      setSuccessMsg(`Estado cambiado a ${pendingEstado}`)
+      setTimeout(() => setSuccessMsg(null), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cambiar estado')
     } finally {
-      setLoading(false)
+      setChangingEstado(false)
     }
   }
 
@@ -236,20 +268,32 @@ export default function LicitacionDetailPage() {
           </div>
         </div>
 
+        {/* Success Message */}
+        {successMsg && (
+          <div className="mb-6 p-4 rounded-lg bg-green-50 border border-green-200">
+            <p className="text-green-700 font-medium">✓ {successMsg}</p>
+          </div>
+        )}
+
         {/* Estado Selector */}
         <Card className="mb-6">
           <div className="flex justify-between items-center">
             <div>
               <h3 className="font-semibold text-gray-900">Estado de la Licitación</h3>
-              <p className="text-sm text-gray-600 mt-1">Cambiar estado actual</p>
+              <p className="text-sm text-gray-600 mt-1">
+                {getValidTransitions(licitacion.estado).length === 0
+                  ? 'Estado final - no se puede cambiar'
+                  : 'Cambiar estado actual'}
+              </p>
             </div>
             <select
               value={newEstado}
-              onChange={(e) => handleChangeEstado(e.target.value)}
-              disabled={loading}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              onChange={(e) => handleEstadoChange(e.target.value)}
+              disabled={loading || changingEstado || getValidTransitions(licitacion.estado).length === 0}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50"
             >
-              {ESTADO_OPTIONS.map((estado) => (
+              <option value={licitacion.estado}>{licitacion.estado} (actual)</option>
+              {getValidTransitions(licitacion.estado).map((estado) => (
                 <option key={estado} value={estado}>
                   {estado}
                 </option>
@@ -404,6 +448,39 @@ export default function LicitacionDetailPage() {
                 isLoading={deleting}
               >
                 Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Estado Change Modal */}
+      {estadoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Cambiar Estado</h3>
+            <p className="text-gray-600 mb-4">
+              ¿Deseas cambiar el estado de <strong>{licitacion.estado}</strong> a <strong>{pendingEstado}</strong>?
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Este cambio afectará a los proveedores y evaluadores que trabajen en esta licitación.
+            </p>
+            <div className="flex gap-4">
+              <Button
+                onClick={() => {
+                  setEstadoModal(false)
+                  setPendingEstado('')
+                }}
+                variant="secondary"
+                disabled={changingEstado}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={confirmEstadoChange}
+                isLoading={changingEstado}
+              >
+                Confirmar cambio
               </Button>
             </div>
           </div>
