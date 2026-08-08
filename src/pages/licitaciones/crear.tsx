@@ -19,7 +19,7 @@ export default function CrearLicitacionPage() {
     numero: '',
     titulo: '',
     descripcion: '',
-    tipo_licita: 'Equipamiento',
+    tipo_licita: 'Infraestructura',
     presupuesto_total: '',
     ponderacion_precio: '',
     ponderacion_tecnica: '',
@@ -224,7 +224,7 @@ export default function CrearLicitacionPage() {
                       value={formData.descripcion}
                       onChange={handleChange}
                       rows={3}
-                      placeholder="Detalles de la licitación..."
+                      placeholder="Detalles del requerimiento..."
                       className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 transition-colors resize-none"
                     />
                   </div>
@@ -241,11 +241,12 @@ export default function CrearLicitacionPage() {
                         onChange={handleChange}
                         className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-teal-500 transition-colors"
                       >
-                        <option>Equipamiento</option>
-                        <option>Servicios</option>
-                        <option>Infraestructura</option>
-                        <option>Otro</option>
+                        <option value="Infraestructura">Infraestructura — Obras e Infraestructura</option>
+                        <option value="Suministros">Suministros — Adquisición de Bienes</option>
+                        <option value="Servicios">Servicios — Prestación de Servicios</option>
+                        <option value="Consultoría">Consultoría — Estudios y Asesorías</option>
                       </select>
+                      <p className="text-xs text-gray-500 mt-1">Según Ley 19.886 y DS 661/2024</p>
                     </div>
 
                     <div>

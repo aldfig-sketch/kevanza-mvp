@@ -36,7 +36,7 @@ export default function EditLicitacionPage() {
     numero: '',
     titulo: '',
     descripcion: '',
-    tipo_licita: 'Equipamiento',
+    tipo_licita: 'Infraestructura',
     presupuesto_total: '',
     ponderacion_precio: '',
     ponderacion_tecnica: '',
@@ -274,7 +274,7 @@ export default function EditLicitacionPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tipo de licitación
+                      Tipo de adquisición
                     </label>
                     <select
                       name="tipo_licita"
@@ -282,10 +282,10 @@ export default function EditLicitacionPage() {
                       onChange={handleChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                     >
-                      <option>Equipamiento</option>
-                      <option>Servicios</option>
-                      <option>Infraestructura</option>
-                      <option>Otro</option>
+                      <option value="Infraestructura">Infraestructura — Obras e Infraestructura</option>
+                      <option value="Suministros">Suministros — Adquisición de Bienes</option>
+                      <option value="Servicios">Servicios — Prestación de Servicios</option>
+                      <option value="Consultoría">Consultoría — Estudios y Asesorías</option>
                     </select>
                   </div>
 
