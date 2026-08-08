@@ -64,8 +64,34 @@ export default function EvaluarOfertaPage() {
     setError('')
 
     try {
+      // Validar que puntajes sean válidos
+      if (
+        puntajes.puntaje_precio < 0 ||
+        puntajes.puntaje_precio > 100 ||
+        puntajes.puntaje_tecnica < 0 ||
+        puntajes.puntaje_tecnica > 100 ||
+        puntajes.puntaje_plazo < 0 ||
+        puntajes.puntaje_plazo > 100
+      ) {
+        setError('Los puntajes deben estar entre 0 y 100')
+        return
+      }
+
+      // Validar ponderaciones sumen 100%
+      const sumaP =
+        licitacion.ponderacion_precio +
+        licitacion.ponderacion_tecnica +
+        licitacion.ponderacion_plazo
+      if (Math.abs(sumaP - 100) > 0.01) {
+        setError('Las ponderaciones no suman 100%')
+        return
+      }
+
+      // Guardar
       await actualizarPuntajeOferta(ofertaId as string, {
-        ...puntajes,
+        puntaje_precio: puntajes.puntaje_precio,
+        puntaje_tecnica: puntajes.puntaje_tecnica,
+        puntaje_plazo: puntajes.puntaje_plazo,
         ponderacion_precio: licitacion.ponderacion_precio,
         ponderacion_tecnica: licitacion.ponderacion_tecnica,
         ponderacion_plazo: licitacion.ponderacion_plazo,
@@ -75,9 +101,11 @@ export default function EvaluarOfertaPage() {
       setTimeout(() => {
         router.push(`/licitaciones/${id}/ofertas`)
       }, 1500)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error:', err)
-      setError('Error al guardar evaluación')
+      // Si es KevanzaError, usar userMessage; si no, mensaje genérico
+      const message = err.userMessage || err.message || 'Error al guardar evaluación'
+      setError(message)
     } finally {
       setSaving(false)
     }
