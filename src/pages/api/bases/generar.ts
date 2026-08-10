@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import Anthropic from '@anthropic-ai/sdk'
 
 interface GenerarBasesRequest {
   licitacionId: string
@@ -8,6 +7,10 @@ interface GenerarBasesRequest {
   presupuesto: number
   plazo?: number
   descripcion?: string
+}
+
+interface AnthropicMessage {
+  content: Array<{ type: string; text: string }>
 }
 
 export default async function handler(
@@ -19,6 +22,13 @@ export default async function handler(
   }
 
   try {
+    const authHeader = req.headers.authorization || ''
+    const token = authHeader.replace('Bearer ', '')
+
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized - no token provided' })
+    }
+
     const { licitacionId, titulo, tipo, presupuesto, plazo, descripcion } = req.body as GenerarBasesRequest
 
     if (!licitacionId || !titulo || !tipo || presupuesto === null || presupuesto === undefined) {
@@ -55,27 +65,47 @@ Devuelve JSON con esta estructura (sin markdown, JSON puro):
 
 Genera SOLO JSON. Sin explicaciones. Formato profesional.`
 
-    const client = new Anthropic()
-    const message = await client.messages.create({
-      model: 'claude-opus-4-1-20250805',
-      max_tokens: 4000,
-      messages: [{ role: 'user', content: prompt }],
+    // Call Anthropic API directly via fetch
+    const anthropicKey = process.env.ANTHROPIC_API_KEY
+    if (!anthropicKey) {
+      throw new Error('ANTHROPIC_API_KEY not configured')
+    }
+
+    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-1-20250805',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }],
+      }),
     })
 
+    if (!claudeResponse.ok) {
+      const error = await claudeResponse.text()
+      throw new Error(`Claude API error: ${error}`)
+    }
+
+    const message = (await claudeResponse.json()) as AnthropicMessage
     const textContent = message.content.find((block) => block.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
+    if (!textContent) {
       throw new Error('No text response from Claude')
     }
 
     const contenidoIA = JSON.parse(textContent.text)
 
-    // Insert directly via REST API
-    const response = await fetch(
+    // Insert via REST API with authenticated user token
+    const supabaseResponse = await fetch(
       `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/bases_generadas`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
           apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         },
         body: JSON.stringify({
@@ -87,12 +117,12 @@ Genera SOLO JSON. Sin explicaciones. Formato profesional.`
       }
     )
 
-    if (!response.ok) {
-      const error = await response.text()
+    if (!supabaseResponse.ok) {
+      const error = await supabaseResponse.text()
       throw new Error(`Supabase error: ${error}`)
     }
 
-    const basesGenerada = await response.json()
+    const basesGenerada = await supabaseResponse.json()
     return res.status(200).json(basesGenerada[0] || basesGenerada)
   } catch (error) {
     console.error('Error generando bases:', error)

@@ -10,11 +10,16 @@ export interface Requerimiento {
   datos_bases?: Record<string, any>
 }
 
-export async function generarBasesPropuesta(req: Requerimiento) {
+export async function generarBasesPropuesta(req: Requerimiento, accessToken?: string) {
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`
+    }
+
     const res = await fetch('/api/bases/generar', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         licitacionId: req.id,
         titulo: req.titulo,

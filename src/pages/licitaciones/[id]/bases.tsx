@@ -52,7 +52,10 @@ export default function GenerarBasesPage() {
     setLoading(true)
     setError(null)
     try {
-      const basesGeneradas = await generarBasesPropuesta(licitacion)
+      const { data } = await supabase.auth.getSession()
+      const accessToken = data.session?.access_token
+
+      const basesGeneradas = await generarBasesPropuesta(licitacion, accessToken)
       setBases(basesGeneradas)
       setContenido(JSON.stringify(basesGeneradas.contenido_bases, null, 2))
       setSuccess('✅ Bases generadas con IA exitosamente')
