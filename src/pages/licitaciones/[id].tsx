@@ -10,7 +10,7 @@ import { StatBadge } from '@/components/StatBadge'
 import { ProgressBar } from '@/components/ProgressBar'
 import { DocumentosSection } from '@/components/DocumentosSection'
 import { supabase } from '@/lib/supabase'
-import { ChevronDown, ArrowLeft, Edit2, Trash2, Clock, User, MapPin, DollarSign } from 'lucide-react'
+import { ChevronDown, ArrowLeft, Edit2, Trash2, Clock, User, MapPin, DollarSign, Zap } from 'lucide-react'
 import {
   ESTADO_REQUERIMIENTO_LABELS,
   ESTADO_REQUERIMIENTO_TRANSITIONS,
@@ -242,6 +242,13 @@ export default function LicitacionDetailPage() {
           <Card className="mb-8 p-6" variant="elevated">
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap gap-3">
+                <Button
+                  onClick={() => router.push(`/licitaciones/${licitacion.id}/bases`)}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <Zap className="w-4 h-4" />
+                  Generar Bases
+                </Button>
                 {canEdit && (
                   <Button
                     onClick={() => router.push(`/licitaciones/${licitacion.id}/edit`)}
