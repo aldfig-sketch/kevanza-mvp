@@ -67,9 +67,9 @@ export default function DashboardPage() {
       setStats({
         total: licitaciones.length,
         borrador: licitaciones.filter((l) => l.estado === 'BORRADOR').length,
-        revision: licitaciones.filter((l) => ['EN_REVISION', 'OBSERVADO'].includes(l.estado)).length,
-        aprobacion: licitaciones.filter((l) => ['APROBADO_JURIDICO', 'DECRETO_GENERADO'].includes(l.estado)).length,
-        listoMercadoPublico: licitaciones.filter((l) => l.estado === 'LISTO_MERCADO_PUBLICO').length,
+        revision: licitaciones.filter((l) => ['ENVIADA_COMPRA', 'RECHAZADA_COMPRA', 'BASES_GENERADAS', 'ENVIADA_JURIDICO', 'EN_REVISION', 'OBSERVADO', 'RECHAZADA_JURIDICO'].includes(l.estado)).length,
+        aprobacion: licitaciones.filter((l) => ['APROBADA_COMPRA', 'APROBADO_JURIDICO', 'DECRETO_GENERADO', 'PENDIENTE_FIRMA'].includes(l.estado)).length,
+        listoMercadoPublico: licitaciones.filter((l) => ['LISTO_PUBLICACION', 'PUBLICADA_MP', 'LISTO_MERCADO_PUBLICO'].includes(l.estado)).length,
         byType,
       })
     } catch (err) {
@@ -128,12 +128,26 @@ export default function DashboardPage() {
                 {organismoNombre || 'Panel de gestión de requerimientos'}
               </p>
             </div>
-            <Link href="/licitaciones/crear">
-              <Button size="lg">
-                <Plus className="w-5 h-5" />
-                Nuevo requerimiento
-              </Button>
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              {(profile?.rol === 'ADMIN_MUNICIPIO' || profile?.rol === 'ADMIN_INSTITUCION' || profile?.rol === 'UNIDAD_TECNICA') && (
+                <Link href="/licitaciones/crear">
+                  <Button size="lg">
+                    <Plus className="w-5 h-5" />
+                    Nuevo requerimiento
+                  </Button>
+                </Link>
+              )}
+              {(profile?.rol === 'ADMIN_MUNICIPIO' || profile?.rol === 'ADMIN_INSTITUCION' || profile?.rol === 'UNIDAD_COMPRA') && (
+                <>
+                  <Link href="/admin/revisar-licitaciones">
+                    <Button size="lg" className="bg-slate-700 hover:bg-slate-800">Revisar requerimientos</Button>
+                  </Link>
+                  <Link href="/admin/revisar-bases-compra">
+                    <Button size="lg" className="bg-indigo-700 hover:bg-indigo-800">Revisar bases</Button>
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Stats Cards */}

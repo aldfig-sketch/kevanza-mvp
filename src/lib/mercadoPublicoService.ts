@@ -44,7 +44,7 @@ export async function publicarEnMercadoPublico(
         fecha_publicacion_completada: new Date().toISOString(),
         estado_general: 'COMPLETADO',
       })
-      .eq('requerimiento_id', data.requerimiento_id)
+      .eq('licitacion_id', data.licitacion_id)
 
     return {
       id: idMP,

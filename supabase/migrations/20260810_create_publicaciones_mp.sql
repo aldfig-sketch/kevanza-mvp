@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS public.publicaciones_mercado_publico (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   bases_id UUID NOT NULL REFERENCES public.bases_generadas(id) ON DELETE CASCADE,
-  requerimiento_id UUID NOT NULL REFERENCES public.requerimientos(id) ON DELETE CASCADE,
+  licitacion_id UUID NOT NULL REFERENCES public.licitaciones(id) ON DELETE CASCADE,
   
   numero_decreto VARCHAR(100),
   fecha_decreto TIMESTAMP WITH TIME ZONE,
@@ -26,6 +26,22 @@ CREATE INDEX IF NOT EXISTS idx_publicaciones_mp ON public.publicaciones_mercado_
 
 ALTER TABLE public.publicaciones_mercado_publico ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY pub_read ON public.publicaciones_mercado_publico FOR SELECT USING (true);
-CREATE POLICY pub_insert ON public.publicaciones_mercado_publico FOR INSERT WITH CHECK (auth.uid() = publicado_por OR true);
-CREATE POLICY pub_update ON public.publicaciones_mercado_publico FOR UPDATE USING (auth.uid() = publicado_por OR true);
+CREATE POLICY pub_read ON public.publicaciones_mercado_publico FOR SELECT TO authenticated USING (EXISTS (
+  SELECT 1 FROM public.usuarios u
+  JOIN public.licitaciones l ON l.municipio_id = u.municipio_id
+  WHERE u.id = (SELECT auth.uid()) AND coalesce(u.activo, true) AND l.id = publicaciones_mercado_publico.licitacion_id
+));
+CREATE POLICY pub_insert ON public.publicaciones_mercado_publico FOR INSERT TO authenticated WITH CHECK (EXISTS (
+  SELECT 1 FROM public.usuarios u
+  JOIN public.licitaciones l ON l.municipio_id = u.municipio_id
+  WHERE u.id = (SELECT auth.uid()) AND coalesce(u.activo, true) AND l.id = publicaciones_mercado_publico.licitacion_id
+));
+CREATE POLICY pub_update ON public.publicaciones_mercado_publico FOR UPDATE TO authenticated USING (EXISTS (
+  SELECT 1 FROM public.usuarios u
+  JOIN public.licitaciones l ON l.municipio_id = u.municipio_id
+  WHERE u.id = (SELECT auth.uid()) AND coalesce(u.activo, true) AND l.id = publicaciones_mercado_publico.licitacion_id
+)) WITH CHECK (EXISTS (
+  SELECT 1 FROM public.usuarios u
+  JOIN public.licitaciones l ON l.municipio_id = u.municipio_id
+  WHERE u.id = (SELECT auth.uid()) AND coalesce(u.activo, true) AND l.id = publicaciones_mercado_publico.licitacion_id
+));

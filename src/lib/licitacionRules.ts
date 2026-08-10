@@ -14,34 +14,61 @@ export const UTM_CLP = 68000
 export type TipoCompra = 'Infraestructura' | 'Suministros' | 'Servicios' | 'Consultoría'
 export type EstadoRequerimiento =
   | 'BORRADOR'
+  | 'ENVIADA_COMPRA'
+  | 'RECHAZADA_COMPRA'
+  | 'APROBADA_COMPRA'
+  | 'BASES_GENERADAS'
+  | 'ENVIADA_JURIDICO'
   | 'EN_REVISION'
   | 'OBSERVADO'
+  | 'RECHAZADA_JURIDICO'
   | 'APROBADO_JURIDICO'
   | 'DECRETO_GENERADO'
+  | 'PENDIENTE_FIRMA'
+  | 'LISTO_PUBLICACION'
+  | 'PUBLICADA_MP'
   | 'LISTO_MERCADO_PUBLICO'
   | 'ARCHIVADO'
 
 export const ESTADO_REQUERIMIENTO_LABELS: Record<EstadoRequerimiento, string> = {
   BORRADOR: 'Borrador',
+  ENVIADA_COMPRA: 'En revisión de compras',
+  RECHAZADA_COMPRA: 'Observada por compras',
+  APROBADA_COMPRA: 'Aprobada por compras',
+  BASES_GENERADAS: 'Bases generadas',
+  ENVIADA_JURIDICO: 'Enviada a jurídico',
   EN_REVISION: 'En revisión interna',
   OBSERVADO: 'Observado',
+  RECHAZADA_JURIDICO: 'Observada por jurídico',
   APROBADO_JURIDICO: 'Aprobado jurídico',
   DECRETO_GENERADO: 'Decreto generado',
+  PENDIENTE_FIRMA: 'Pendiente de firma',
+  LISTO_PUBLICACION: 'Lista para publicar',
+  PUBLICADA_MP: 'Publicada en Mercado Público',
   LISTO_MERCADO_PUBLICO: 'Listo para Mercado Público',
   ARCHIVADO: 'Archivado',
 }
 
 export const ESTADO_REQUERIMIENTO_TRANSITIONS: Record<EstadoRequerimiento, EstadoRequerimiento[]> = {
-  BORRADOR: ['EN_REVISION'],
-  EN_REVISION: ['OBSERVADO', 'APROBADO_JURIDICO'],
-  OBSERVADO: ['EN_REVISION'],
+  BORRADOR: ['ENVIADA_COMPRA'],
+  ENVIADA_COMPRA: ['RECHAZADA_COMPRA', 'APROBADA_COMPRA'],
+  RECHAZADA_COMPRA: ['ENVIADA_COMPRA'],
+  APROBADA_COMPRA: ['BASES_GENERADAS'],
+  BASES_GENERADAS: ['ENVIADA_JURIDICO', 'OBSERVADO'],
+  ENVIADA_JURIDICO: ['EN_REVISION', 'RECHAZADA_JURIDICO'],
+  EN_REVISION: ['OBSERVADO', 'APROBADO_JURIDICO', 'RECHAZADA_JURIDICO'],
+  OBSERVADO: ['EN_REVISION', 'BASES_GENERADAS'],
+  RECHAZADA_JURIDICO: ['BASES_GENERADAS'],
   APROBADO_JURIDICO: ['DECRETO_GENERADO'],
-  DECRETO_GENERADO: ['LISTO_MERCADO_PUBLICO'],
+  DECRETO_GENERADO: ['PENDIENTE_FIRMA'],
+  PENDIENTE_FIRMA: ['LISTO_PUBLICACION'],
+  LISTO_PUBLICACION: ['PUBLICADA_MP'],
+  PUBLICADA_MP: ['ARCHIVADO'],
   LISTO_MERCADO_PUBLICO: ['ARCHIVADO'],
   ARCHIVADO: [],
 }
 
-export const ESTADOS_EDITABLES: EstadoRequerimiento[] = ['BORRADOR', 'OBSERVADO']
+export const ESTADOS_EDITABLES: EstadoRequerimiento[] = ['BORRADOR', 'RECHAZADA_COMPRA', 'OBSERVADO', 'RECHAZADA_JURIDICO']
 export const ESTADOS_DOCUMENTOS_EDITABLES: EstadoRequerimiento[] = [
   'BORRADOR',
   'OBSERVADO',

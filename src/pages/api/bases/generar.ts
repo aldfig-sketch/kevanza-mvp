@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { authenticateRequest } from '@/lib/supabaseServer'
 
 interface GenerarBasesRequest {
   licitacionId: string
@@ -22,12 +23,8 @@ export default async function handler(
   }
 
   try {
-    const authHeader = req.headers.authorization || ''
-    const token = authHeader.replace('Bearer ', '')
-
-    if (!token) {
-      return res.status(401).json({ error: 'Unauthorized - no token provided' })
-    }
+    const auth = await authenticateRequest(req.headers.authorization)
+    if (!auth) return res.status(401).json({ error: 'Usuario no válido' })
 
     const { licitacionId, titulo, tipo, presupuesto, plazo, descripcion } = req.body as GenerarBasesRequest
 
@@ -35,14 +32,24 @@ export default async function handler(
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
+    const { data: licitacion, error: licitacionError } = await auth.client
+      .from('licitaciones')
+      .select('*')
+      .eq('id', licitacionId)
+      .single()
+
+    if (licitacionError || !licitacion) {
+      return res.status(404).json({ error: 'Requerimiento no encontrado' })
+    }
+
     const prompt = `ERES EXPERTO EN BASES DE LICITACIONES PÚBLICAS CHILE (Ley 19.886 / DS 661/2024).
 
 Requerimiento:
-- Título: ${titulo}
-- Tipo: ${tipo}
-- Presupuesto: $${presupuesto.toLocaleString('es-CL')} CLP
-- Plazo: ${plazo || '(no especificado)'} días
-- Descripción: ${descripcion || '(sin descripción)'}
+- Título: ${licitacion.titulo}
+- Tipo: ${licitacion.tipo_licita}
+- Presupuesto: $${Number(licitacion.presupuesto_total || presupuesto).toLocaleString('es-CL')} CLP
+- Plazo: ${licitacion.plazo_ejecucion_dias || plazo || '(no especificado)'} días
+- Descripción: ${licitacion.descripcion || descripcion || '(sin descripción)'}
 
 GENERA PROPUESTA ESTRUCTURADA DE BASES:
 
@@ -67,9 +74,7 @@ Genera SOLO JSON. Sin explicaciones. Formato profesional.`
 
     // Call Anthropic API directly via fetch
     const anthropicKey = process.env.ANTHROPIC_API_KEY
-    if (!anthropicKey) {
-      throw new Error('ANTHROPIC_API_KEY not configured')
-    }
+    if (!anthropicKey) return res.status(503).json({ error: 'Generación IA no configurada' })
 
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -98,32 +103,26 @@ Genera SOLO JSON. Sin explicaciones. Formato profesional.`
 
     const contenidoIA = JSON.parse(textContent.text)
 
-    // Insert via REST API with authenticated user token
-    const supabaseResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/bases_generadas`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        },
-        body: JSON.stringify({
-          licitacion_id: licitacionId,
-          tipo_compra: tipo,
-          contenido_bases: contenidoIA,
-          estado: 'PROPUESTA',
-        }),
-      }
-    )
+    const { data: basesGenerada, error: insertError } = await auth.client
+      .from('bases_generadas')
+      .insert({
+        licitacion_id: licitacionId,
+        tipo_compra: licitacion.tipo_licita,
+        contenido_bases: contenidoIA,
+        estado: 'PROPUESTA',
+      })
+      .select()
+      .single()
 
-    if (!supabaseResponse.ok) {
-      const error = await supabaseResponse.text()
-      throw new Error(`Supabase error: ${error}`)
-    }
+    if (insertError) throw insertError
 
-    const basesGenerada = await supabaseResponse.json()
-    return res.status(200).json(basesGenerada[0] || basesGenerada)
+    const { error: stateError } = await auth.client
+      .from('licitaciones')
+      .update({ estado: 'BASES_GENERADAS' })
+      .eq('id', licitacionId)
+    if (stateError) throw stateError
+
+    return res.status(200).json(basesGenerada)
   } catch (error) {
     console.error('Error generando bases:', error)
     return res.status(500).json({ error: error instanceof Error ? error.message : 'Error desconocido' })

@@ -271,11 +271,11 @@ export default function GenerarBasesPage() {
           <div className="mt-6 flex gap-4">
             {bases.estado !== 'APROBADO' ? (
               <Button
-                onClick={handleEnviarAJuridico}
+                onClick={() => router.push('/admin/revisar-bases-compra')}
                 disabled={loading}
                 className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
               >
-                {loading ? '⏳ Enviando...' : '📧 Enviar a Jurídico →'}
+                Revisar bases antes de Jurídico →
               </Button>
             ) : (
               <Button

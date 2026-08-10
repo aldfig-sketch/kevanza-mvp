@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   notificarEnviadoAJuridico,
   notificarObservacionesJuridicas,
@@ -16,10 +17,11 @@ export interface RevisionJuridica {
   motivo_rechazo?: string
 }
 
-export async function enviarAJuridico(basesId: string, userId: string) {
+export async function enviarAJuridico(basesId: string, userId: string, client: SupabaseClient = supabase) {
   try {
+    const db = client
     // Obtener requerimiento_id
-    const { data: basesData } = await supabase
+    const { data: basesData } = await db
       .from('bases_generadas')
       .select('licitacion_id')
       .eq('id', basesId)
@@ -27,7 +29,7 @@ export async function enviarAJuridico(basesId: string, userId: string) {
 
     if (!basesData) throw new Error('Bases no encontradas')
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('revisiones_juridicas')
       .insert([
         {
@@ -44,13 +46,13 @@ export async function enviarAJuridico(basesId: string, userId: string) {
 
     // Enviar email al usuario
     try {
-      const { data: usuarioData } = await supabase
+      const { data: usuarioData } = await db
         .from('usuarios')
         .select('email, nombre')
         .eq('id', userId)
         .single()
 
-      const { data: licData } = await supabase
+      const { data: licData } = await db
         .from('licitaciones')
         .select('titulo')
         .eq('id', basesData.licitacion_id)
@@ -74,8 +76,8 @@ export async function enviarAJuridico(basesId: string, userId: string) {
   }
 }
 
-export async function obtenerRevisionesEnEspera(userId: string) {
-  const { data, error } = await supabase
+export async function obtenerRevisionesEnEspera(userId: string, client: SupabaseClient = supabase) {
+  const { data, error } = await client
     .from('revisiones_juridicas')
     .select(`
       *,
@@ -93,7 +95,7 @@ export async function obtenerRevisionesEnEspera(userId: string) {
         presupuesto_total
       )
     `)
-    .eq('asignado_a', userId)
+    .or(`asignado_a.is.null,asignado_a.eq.${userId}`)
     .in('estado', ['ENVIADA', 'EN_REVISION'])
     .order('fecha_envio', { ascending: false })
 
@@ -104,9 +106,10 @@ export async function obtenerRevisionesEnEspera(userId: string) {
 export async function agregarObservaciones(
   revisionId: string,
   observaciones: Record<string, any>,
-  userId: string
+  userId: string,
+  client: SupabaseClient = supabase
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('revisiones_juridicas')
     .update({
       estado: 'OBSERVACIONES',
@@ -122,20 +125,20 @@ export async function agregarObservaciones(
 
   // Enviar email al usuario con observaciones
   try {
-    const { data: revData } = await supabase
+    const { data: revData } = await client
       .from('revisiones_juridicas')
       .select('enviado_por')
       .eq('id', revisionId)
       .single()
 
     if (revData?.enviado_por) {
-      const { data: usuarioData } = await supabase
+      const { data: usuarioData } = await client
         .from('usuarios')
         .select('email, nombre')
         .eq('id', revData.enviado_por)
         .single()
 
-      const { data: licData } = await supabase
+      const { data: licData } = await client
         .from('licitaciones')
         .select('titulo')
         .eq('id', data.requerimiento_id)
@@ -157,8 +160,8 @@ export async function agregarObservaciones(
   return data
 }
 
-export async function aprobarBases(revisionId: string, userId: string) {
-  const { data, error } = await supabase
+export async function aprobarBases(revisionId: string, userId: string, client: SupabaseClient = supabase) {
+  const { data, error } = await client
     .from('revisiones_juridicas')
     .update({
       estado: 'APROBADA',
@@ -173,27 +176,27 @@ export async function aprobarBases(revisionId: string, userId: string) {
   if (error) throw error
 
   // Actualizar bases a APROBADO
-  await supabase
+  await client
     .from('bases_generadas')
     .update({ estado: 'APROBADO' })
     .eq('id', data.bases_id)
 
   // Enviar email al usuario de aprobación
   try {
-    const { data: revData } = await supabase
+    const { data: revData } = await client
       .from('revisiones_juridicas')
       .select('enviado_por')
       .eq('id', revisionId)
       .single()
 
     if (revData?.enviado_por) {
-      const { data: usuarioData } = await supabase
+      const { data: usuarioData } = await client
         .from('usuarios')
         .select('email, nombre')
         .eq('id', revData.enviado_por)
         .single()
 
-      const { data: licData } = await supabase
+      const { data: licData } = await client
         .from('licitaciones')
         .select('titulo')
         .eq('id', data.requerimiento_id)
@@ -217,9 +220,10 @@ export async function aprobarBases(revisionId: string, userId: string) {
 export async function rechazarBases(
   revisionId: string,
   motivo: string,
-  userId: string
+  userId: string,
+  client: SupabaseClient = supabase
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('revisiones_juridicas')
     .update({
       estado: 'RECHAZADA',
@@ -236,8 +240,8 @@ export async function rechazarBases(
   return data
 }
 
-export async function obtenerHistorialRevision(basesId: string) {
-  const { data, error } = await supabase
+export async function obtenerHistorialRevision(basesId: string, client: SupabaseClient = supabase) {
+  const { data, error } = await client
     .from('revisiones_juridicas')
     .select('*')
     .eq('bases_id', basesId)

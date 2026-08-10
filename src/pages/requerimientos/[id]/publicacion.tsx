@@ -15,6 +15,9 @@ export default function PaginaPublicacion() {
   const [bases, setBases] = useState<any>(null)
   const [decreto, setDecreto] = useState<any>(null)
   const [publicacion, setPublicacion] = useState<any>(null)
+  const [firmaSolicitada, setFirmaSolicitada] = useState(false)
+  const [autoridadNombre, setAutoridadNombre] = useState('Autoridad de la institución')
+  const [autoridadEmail, setAutoridadEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [paso, setPaso] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -52,6 +55,9 @@ export default function PaginaPublicacion() {
           setDecreto(decretoExistente)
           setPaso(1)
 
+          if (['PENDIENTE_FIRMA', 'LISTO_PUBLICACION'].includes(decretoExistente.estado_publicacion)) {
+            setFirmaSolicitada(true)
+          }
           if (decretoExistente.estado_publicacion === 'PUBLICADA') {
             setPublicacion(decretoExistente)
             setPaso(2)
@@ -108,18 +114,36 @@ export default function PaginaPublicacion() {
       const token = data.session?.access_token
       if (!token) throw new Error('No autorizado')
 
-      const response = await fetch('/api/publicacion/publicar-mp', {
+      if (decreto.estado_publicacion === 'LISTO_PUBLICACION') {
+        const response = await fetch('/api/publicacion/publicar-mp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ decretoId: decreto.id, basesId: bases.id }),
+        })
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || 'Error publicando')
+        setPublicacion(result.publicacion)
+        setPaso(2)
+        return
+      }
+
+      if (!autoridadNombre.trim() || !autoridadEmail.trim()) {
+        throw new Error('Indica nombre y correo de la autoridad firmante')
+      }
+
+      const response = await fetch('/api/firma/crear-solicitud', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          decretoId: decreto.id,
-          basesId: bases.id,
-          titulo: requerimiento.titulo,
-          presupuesto: requerimiento.presupuesto_total,
-          plazo: requerimiento.plazo_ejecucion_dias,
+          publicacionId: decreto.id,
+          autoridadNombre,
+          autoridadEmail,
         }),
       })
 
@@ -128,10 +152,11 @@ export default function PaginaPublicacion() {
         throw new Error(data.error || 'Error publicando')
       }
 
-      const { publicacion: nuevaPublicacion } = await response.json()
-      setPublicacion(nuevaPublicacion)
-      setPaso(2)
-      alert('✅ Publicado en Mercado Público')
+      const result = await response.json()
+      setFirmaSolicitada(true)
+      setDecreto((current: any) => ({ ...current, estado_publicacion: 'PENDIENTE_FIRMA' }))
+      setPaso(1)
+      alert(`Solicitud de firma creada. Enlace: ${result.linkFirma}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error desconocido'
       setError(msg)
@@ -203,15 +228,23 @@ export default function PaginaPublicacion() {
               paso >= 1 ? 'bg-blue-50 border-blue-400' : 'bg-gray-50 border-gray-400 opacity-50'
             }`}
           >
-            <h3 className="text-lg font-bold mb-4">2️⃣ Publicar en MP</h3>
+            <h3 className="text-lg font-bold mb-4">2️⃣ Firma de autoridad</h3>
             {!publicacion ? (
-              <Button
-                onClick={handlePublicarMP}
-                disabled={!decreto || loading}
-                className="w-full bg-teal-600 hover:bg-teal-700"
-              >
-                {loading ? '⏳ Publicando...' : '🌐 Publicar MP'}
-              </Button>
+              firmaSolicitada ? (
+                decreto.estado_publicacion === 'LISTO_PUBLICACION' ? (
+                  <Button onClick={handlePublicarMP} disabled={loading} className="w-full bg-teal-600 hover:bg-teal-700">
+                    {loading ? '⏳ Publicando...' : '🌐 Publicar en Mercado Público'}
+                  </Button>
+                ) : <p className="text-amber-700 font-semibold">Solicitud enviada. Pendiente de firma de autoridad.</p>
+              ) : (
+                <>
+                  <input value={autoridadNombre} onChange={(event) => setAutoridadNombre(event.target.value)} placeholder="Nombre autoridad" className="w-full border rounded p-2 mb-2" />
+                  <input value={autoridadEmail} onChange={(event) => setAutoridadEmail(event.target.value)} placeholder="Correo autoridad" type="email" className="w-full border rounded p-2 mb-3" />
+                  <Button onClick={handlePublicarMP} disabled={!decreto || loading} className="w-full bg-teal-600 hover:bg-teal-700">
+                    {loading ? '⏳ Creando solicitud...' : '✍️ Solicitar firma'}
+                  </Button>
+                </>
+              )
             ) : (
               <>
                 <p className="text-green-700 font-semibold mb-2">✅ Publicado</p>

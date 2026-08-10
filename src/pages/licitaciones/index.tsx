@@ -68,10 +68,19 @@ export default function LicitacionesPage() {
   const getEstadoBadge = (estado: string) => {
     const variants = {
       BORRADOR: 'default',
+      ENVIADA_COMPRA: 'info',
+      RECHAZADA_COMPRA: 'warning',
+      APROBADA_COMPRA: 'success',
+      BASES_GENERADAS: 'warning',
+      ENVIADA_JURIDICO: 'info',
       EN_REVISION: 'info',
       OBSERVADO: 'warning',
+      RECHAZADA_JURIDICO: 'warning',
       APROBADO_JURIDICO: 'success',
       DECRETO_GENERADO: 'info',
+      PENDIENTE_FIRMA: 'info',
+      LISTO_PUBLICACION: 'success',
+      PUBLICADA_MP: 'success',
       LISTO_MERCADO_PUBLICO: 'success',
       ARCHIVADO: 'default',
     }
@@ -87,10 +96,19 @@ export default function LicitacionesPage() {
 
   const estadoOptions: EstadoRequerimiento[] = [
     'BORRADOR',
+    'ENVIADA_COMPRA',
+    'RECHAZADA_COMPRA',
+    'APROBADA_COMPRA',
+    'BASES_GENERADAS',
+    'ENVIADA_JURIDICO',
     'EN_REVISION',
     'OBSERVADO',
+    'RECHAZADA_JURIDICO',
     'APROBADO_JURIDICO',
     'DECRETO_GENERADO',
+    'PENDIENTE_FIRMA',
+    'LISTO_PUBLICACION',
+    'PUBLICADA_MP',
     'LISTO_MERCADO_PUBLICO',
     'ARCHIVADO',
   ]

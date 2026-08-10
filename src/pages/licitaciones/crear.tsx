@@ -159,9 +159,9 @@ export default function CrearLicitacionPage() {
           ponderacion_precio: parseFloat(formData.ponderacion_precio) || 0,
           ponderacion_tecnica: parseFloat(formData.ponderacion_tecnica) || 0,
           ponderacion_plazo: parseFloat(formData.ponderacion_plazo) || 0,
-          estado: marcarListo ? 'LISTO_MERCADO_PUBLICO' : 'BORRADOR',
+          estado: marcarListo ? 'ENVIADA_COMPRA' : 'BORRADOR',
           created_by: user?.id,
-          published_at: marcarListo ? new Date().toISOString() : null,
+          published_at: null,
         },
       ])
 
@@ -615,7 +615,7 @@ export default function CrearLicitacionPage() {
                 onClick={(e) => handleSubmit(e as any, true)}
                 disabled={loading}
               >
-                Marcar listo para Mercado Público
+                Enviar a Unidad de Compra
               </Button>
               <Button type="submit" size="lg" isLoading={loading}>
                 Guardar como borrador

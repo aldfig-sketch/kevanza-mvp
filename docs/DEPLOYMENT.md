@@ -46,8 +46,10 @@
 
 ```env
 # Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=https://ibgxezibscvdyjpxlglv.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://ibgxezibscvdylpxlglv.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=[anon-key-value]
+ANTHROPIC_API_KEY=[anthropic-key-value]
+SUPABASE_SERVICE_ROLE_KEY=[server-only-key-for-signature-endpoints]
 
 # Note: These are public, that's ok (anon key is limited)
 ```
@@ -57,8 +59,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=[anon-key-value]
 Crear `.env.local` en raíz:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://ibgxezibscvdyjpxlglv.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://ibgxezibscvdylpxlglv.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=[your-anon-key]
+ANTHROPIC_API_KEY=[your-anthropic-key]
+SUPABASE_SERVICE_ROLE_KEY=[server-only-key-for-signature-endpoints]
 ```
 
 ### Rotación de Keys

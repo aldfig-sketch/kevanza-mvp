@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { supabase } from '@/lib/supabase'
+import { authenticateRequest } from '@/lib/supabaseServer'
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,18 +10,12 @@ export default async function handler(
   }
 
   try {
-    const token = req.headers.authorization?.split(' ')[1]
-    if (!token) return res.status(401).json({ error: 'Unauthorized' })
+    const auth = await authenticateRequest(req.headers.authorization)
+    if (!auth) return res.status(401).json({ error: 'Usuario no válido' })
 
     const { basesId } = req.body
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
-      token
-    )
-    if (userError || !user)
-      return res.status(401).json({ error: 'Invalid token' })
-
-    const { data: bases } = await supabase
+    const { data: bases } = await auth.client
       .from('bases_generadas')
       .select('*, licitaciones(*)')
       .eq('id', basesId)
@@ -31,7 +25,10 @@ export default async function handler(
       return res.status(400).json({ error: 'Bases no están aprobadas' })
     }
 
-    const { data: municipio } = await supabase
+    const anthropicKey = process.env.ANTHROPIC_API_KEY
+    if (!anthropicKey) return res.status(503).json({ error: 'Generación IA no configurada' })
+
+    const { data: municipio } = await auth.client
       .from('municipios')
       .select('nombre')
       .eq('id', bases.licitaciones.municipio_id)
@@ -41,7 +38,7 @@ export default async function handler(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+        'x-api-key': anthropicKey,
       },
       body: JSON.stringify({
         model: 'claude-opus-4-1',
@@ -81,13 +78,18 @@ _____________________
       }),
     })
 
+    if (!fetch_response.ok) {
+      const detail = await fetch_response.text()
+      return res.status(502).json({ error: `Error del proveedor IA: ${detail}` })
+    }
+
     const aiResponse = await fetch_response.json()
     const contenidoDecreto =
       aiResponse.content && aiResponse.content[0]
         ? aiResponse.content[0].text
         : 'Error generando decreto'
 
-    const { data: ultimos } = await supabase
+    const { data: ultimos } = await auth.client
       .from('publicaciones_mercado_publico')
       .select('numero_decreto')
       .order('created_at', { ascending: false })
@@ -99,12 +101,13 @@ _____________________
         ? `${anio}-${parseInt(ultimos[0].numero_decreto.split('-')[1]) + 1}`
         : `${anio}-0001`
 
-    const { data: publicacion, error: pubError } = await supabase
+    const { data: publicacion, error: pubError } = await auth.client
       .from('publicaciones_mercado_publico')
       .insert([
         {
           bases_id: basesId,
           licitacion_id: bases.licitaciones.id,
+          publicado_por: auth.user.id,
           numero_decreto: numeroDecreto,
           fecha_decreto: new Date().toISOString(),
           contenido_decreto: contenidoDecreto,
