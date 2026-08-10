@@ -100,6 +100,43 @@ export default function GenerarBasesPage() {
     setTimeout(() => setSuccess(null), 3000)
   }
 
+  const handleEnviarAJuridico = async () => {
+    if (!bases) return
+    setLoading(true)
+    setError(null)
+    try {
+      const { data } = await supabase.auth.getSession()
+      const token = data.session?.access_token
+
+      if (!token) {
+        throw new Error('No autorizado')
+      }
+
+      const response = await fetch('/api/revisiones/enviar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ basesId: bases.id }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error enviando a jurídico')
+      }
+
+      setSuccess('✅ Bases enviadas a jurídico para revisión')
+      setTimeout(() => {
+        router.push('/juridico/revisiones')
+      }, 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error enviando a jurídico')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (!licitacion) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -231,12 +268,19 @@ export default function GenerarBasesPage() {
         )}
 
         {bases && (
-          <div className="mt-6">
+          <div className="mt-6 flex gap-4">
+            <Button
+              onClick={handleEnviarAJuridico}
+              disabled={loading}
+              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {loading ? '⏳ Enviando...' : '📧 Enviar a Jurídico →'}
+            </Button>
             <Button
               onClick={() => router.push(`/licitaciones/${id}`)}
-              className="bg-teal-600 hover:bg-teal-700"
+              className="flex-1 bg-teal-600 hover:bg-teal-700"
             >
-              Enviar a Equipo de Validación →
+              Volver al Requerimiento
             </Button>
           </div>
         )}
