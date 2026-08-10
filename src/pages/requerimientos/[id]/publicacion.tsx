@@ -27,7 +27,7 @@ export default function PaginaPublicacion() {
   const cargarDatos = async () => {
     try {
       const { data: req } = await supabase
-        .from('requerimientos')
+        .from('licitaciones')
         .select('*')
         .eq('id', id)
         .single()
@@ -36,7 +36,7 @@ export default function PaginaPublicacion() {
       const { data: base } = await supabase
         .from('bases_generadas')
         .select('*')
-        .eq('requerimiento_id', id)
+        .eq('licitacion_id', id)
         .eq('estado', 'APROBADO')
         .single()
       setBases(base)
