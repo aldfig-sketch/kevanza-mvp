@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import Anthropic from '@anthropic-ai/sdk'
-import { supabase } from '@/lib/supabase'
 
 interface GenerarBasesRequest {
   licitacionId: string
@@ -22,7 +21,7 @@ export default async function handler(
   try {
     const { licitacionId, titulo, tipo, presupuesto, plazo, descripcion } = req.body as GenerarBasesRequest
 
-    if (!licitacionId || !titulo || !tipo || !presupuesto) {
+    if (!licitacionId || !titulo || !tipo || presupuesto === null || presupuesto === undefined) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
@@ -70,23 +69,31 @@ Genera SOLO JSON. Sin explicaciones. Formato profesional.`
 
     const contenidoIA = JSON.parse(textContent.text)
 
-    // Guardar en BD
-    const { data: basesGenerada, error } = await supabase
-      .from('bases_generadas')
-      .insert([
-        {
+    // Insert directly via REST API
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/bases_generadas`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        },
+        body: JSON.stringify({
           licitacion_id: licitacionId,
           tipo_compra: tipo,
           contenido_bases: contenidoIA,
           estado: 'PROPUESTA',
-        },
-      ])
-      .select()
-      .single()
+        }),
+      }
+    )
 
-    if (error) throw error
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`Supabase error: ${error}`)
+    }
 
-    return res.status(200).json(basesGenerada)
+    const basesGenerada = await response.json()
+    return res.status(200).json(basesGenerada[0] || basesGenerada)
   } catch (error) {
     console.error('Error generando bases:', error)
     return res.status(500).json({ error: error instanceof Error ? error.message : 'Error desconocido' })
