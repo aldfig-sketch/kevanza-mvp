@@ -93,3 +93,23 @@ export async function notificarNuevaRevision(
     html: template.html,
   })
 }
+
+export async function notificarAlertaPlazo(
+  emailUsuario: string,
+  nombreUsuario: string,
+  tituloRequerimiento: string,
+  estado: string,
+  diasRestantes: number
+) {
+  const template = emailTemplates.alertaPlazoEnRiesgo(
+    nombreUsuario,
+    tituloRequerimiento,
+    estado,
+    diasRestantes
+  )
+  return enviarEmail({
+    to: emailUsuario,
+    subject: template.subject,
+    html: template.html,
+  })
+}

@@ -86,4 +86,27 @@ export const emailTemplates = {
       </div>
     `,
   }),
+
+  alertaPlazoEnRiesgo: (usuario: string, titulo: string, estado: string, diasRestantes: number) => ({
+    subject: `⚠️ ALERTA DE PLAZO - ${titulo}`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #f59e0b;">Hola ${usuario},</h2>
+        <p style="color: #374151; font-size: 16px;">El requerimiento está en <strong>riesgo de incumplir plazos</strong>.</p>
+
+        <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; color: #374151;"><strong>Requerimiento:</strong> ${titulo}</p>
+          <p style="margin: 8px 0 0 0; color: #374151;"><strong>Estado:</strong> ${estado}</p>
+          <p style="margin: 8px 0 0 0; color: #f59e0b; font-size: 16px; font-weight: bold;">Días restantes: ${diasRestantes}</p>
+        </div>
+
+        <p style="color: #6b7280; font-size: 14px;">Ingresa al sistema para ver detalles y tomar acciones correctivas.</p>
+
+        <a href="https://kevanza-mvp.vercel.app/admin/seguimiento-plazos" style="display: inline-block; background: #f59e0b; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: 500; margin: 20px 0;">Ver Seguimiento</a>
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">Sistema KEVANZA - Gestión de Bases de Licitaciones</p>
+      </div>
+    `,
+  }),
 }
