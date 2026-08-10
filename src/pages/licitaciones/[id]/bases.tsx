@@ -269,13 +269,22 @@ export default function GenerarBasesPage() {
 
         {bases && (
           <div className="mt-6 flex gap-4">
-            <Button
-              onClick={handleEnviarAJuridico}
-              disabled={loading}
-              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              {loading ? '⏳ Enviando...' : '📧 Enviar a Jurídico →'}
-            </Button>
+            {bases.estado !== 'APROBADO' ? (
+              <Button
+                onClick={handleEnviarAJuridico}
+                disabled={loading}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {loading ? '⏳ Enviando...' : '📧 Enviar a Jurídico →'}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => router.push(`/requerimientos/${id}/publicacion`)}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              >
+                📄 Generar Decreto y Publicar →
+              </Button>
+            )}
             <Button
               onClick={() => router.push(`/licitaciones/${id}`)}
               className="flex-1 bg-teal-600 hover:bg-teal-700"
