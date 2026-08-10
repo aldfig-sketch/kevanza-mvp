@@ -1,4 +1,9 @@
 import { supabase } from './supabase'
+import {
+  notificarEnviadoAJuridico,
+  notificarObservacionesJuridicas,
+  notificarBasesAprobadas,
+} from './emailService'
 
 export interface RevisionJuridica {
   id: string
@@ -37,7 +42,31 @@ export async function enviarAJuridico(basesId: string, userId: string) {
 
     if (error) throw error
 
-    await notificarJuridico(data.id, 'ENVIADA')
+    // Enviar email al usuario
+    try {
+      const { data: usuarioData } = await supabase
+        .from('usuarios')
+        .select('email, nombre')
+        .eq('id', userId)
+        .single()
+
+      const { data: licData } = await supabase
+        .from('licitaciones')
+        .select('titulo')
+        .eq('id', basesData.licitacion_id)
+        .single()
+
+      if (usuarioData?.email && licData?.titulo) {
+        await notificarEnviadoAJuridico(
+          usuarioData.email,
+          usuarioData.nombre || 'Usuario',
+          licData.titulo
+        )
+      }
+    } catch (emailError) {
+      console.error('Error enviando email de notificación:', emailError)
+    }
+
     return data
   } catch (error) {
     console.error('Error enviando a jurídico:', error)
@@ -91,7 +120,40 @@ export async function agregarObservaciones(
 
   if (error) throw error
 
-  await notificarJuridico(revisionId, 'OBSERVACIONES')
+  // Enviar email al usuario con observaciones
+  try {
+    const { data: revData } = await supabase
+      .from('revisiones_juridicas')
+      .select('enviado_por')
+      .eq('id', revisionId)
+      .single()
+
+    if (revData?.enviado_por) {
+      const { data: usuarioData } = await supabase
+        .from('usuarios')
+        .select('email, nombre')
+        .eq('id', revData.enviado_por)
+        .single()
+
+      const { data: licData } = await supabase
+        .from('licitaciones')
+        .select('titulo')
+        .eq('id', data.requerimiento_id)
+        .single()
+
+      if (usuarioData?.email && licData?.titulo) {
+        await notificarObservacionesJuridicas(
+          usuarioData.email,
+          usuarioData.nombre || 'Usuario',
+          licData.titulo,
+          observaciones
+        )
+      }
+    }
+  } catch (emailError) {
+    console.error('Error enviando email de observaciones:', emailError)
+  }
+
   return data
 }
 
@@ -116,7 +178,39 @@ export async function aprobarBases(revisionId: string, userId: string) {
     .update({ estado: 'APROBADO' })
     .eq('id', data.bases_id)
 
-  await notificarJuridico(revisionId, 'APROBADA')
+  // Enviar email al usuario de aprobación
+  try {
+    const { data: revData } = await supabase
+      .from('revisiones_juridicas')
+      .select('enviado_por')
+      .eq('id', revisionId)
+      .single()
+
+    if (revData?.enviado_por) {
+      const { data: usuarioData } = await supabase
+        .from('usuarios')
+        .select('email, nombre')
+        .eq('id', revData.enviado_por)
+        .single()
+
+      const { data: licData } = await supabase
+        .from('licitaciones')
+        .select('titulo')
+        .eq('id', data.requerimiento_id)
+        .single()
+
+      if (usuarioData?.email && licData?.titulo) {
+        await notificarBasesAprobadas(
+          usuarioData.email,
+          usuarioData.nombre || 'Usuario',
+          licData.titulo
+        )
+      }
+    }
+  } catch (emailError) {
+    console.error('Error enviando email de aprobación:', emailError)
+  }
+
   return data
 }
 
@@ -139,7 +233,6 @@ export async function rechazarBases(
 
   if (error) throw error
 
-  await notificarJuridico(revisionId, 'RECHAZADA')
   return data
 }
 
@@ -152,9 +245,4 @@ export async function obtenerHistorialRevision(basesId: string) {
 
   if (error) throw error
   return data
-}
-
-async function notificarJuridico(revisionId: string, estado: string) {
-  console.log(`[NOTIFICACIÓN] Revisión ${revisionId} estado: ${estado}`)
-  // TODO: Implementar con SendGrid o similar
 }
