@@ -12,6 +12,7 @@ export interface UserProfile {
   rol?: string
   role_id?: number
   activo?: boolean
+  ultimo_login?: string
   debe_cambiar_contrasena?: boolean
 }
 
