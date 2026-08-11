@@ -18,6 +18,9 @@ interface Props {
 }
 
 const CATEGORIAS: { key: CategoriaDocumento; label: string; desc: string }[] = [
+  { key: 'CERTIFICADO_DISPONIBILIDAD', label: 'Certificado de disponibilidad', desc: 'PDF obligatorio de disponibilidad presupuestaria' },
+  { key: 'OFICIO_CONDUCTOR', label: 'Oficio conductor', desc: 'PDF obligatorio firmado por la unidad técnica' },
+  { key: 'TECNICO', label: 'Documentos técnicos', desc: 'PDF opcional: especificaciones, planos o antecedentes' },
   { key: 'BASE', label: 'Bases', desc: 'Bases administrativas y técnicas' },
   { key: 'ANEXO', label: 'Anexos', desc: 'Anexos y documentos de apoyo' },
   { key: 'DECRETO', label: 'Decretos', desc: 'Actos administrativos que respaldan el proceso' },
@@ -120,6 +123,7 @@ export function DocumentosSection({ licitacionId, organismoId, userId, canEdit =
                         inputs.current[key] = el
                       }}
                       type="file"
+                      accept="application/pdf,.pdf"
                       className="hidden"
                       onChange={(e) => handleUpload(key, e.target.files?.[0])}
                     />
