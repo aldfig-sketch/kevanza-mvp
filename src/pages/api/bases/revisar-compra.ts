@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!parent?.municipio_id || parent.municipio_id !== profile.municipio_id) {
       return res.status(404).json({ error: 'Bases no encontradas' })
     }
-    if (!['PROPUESTA', 'AJUSTADO', 'OBSERVADO'].includes(bases.estado)) {
+    if (!['SELECCIONADA', 'PROPUESTA', 'AJUSTADO', 'OBSERVADO'].includes(bases.estado)) {
       return res.status(409).json({ error: 'Las bases no están disponibles para revisión' })
     }
 
