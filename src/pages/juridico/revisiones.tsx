@@ -192,9 +192,9 @@ export default function RevisionesJuridicasPage() {
                   </div>
                 </div>
 
-                {/* BASES PROPUESTAS */}
+                {/* BASES AJUSTADAS */}
                 <div className="mb-6">
-                  <h3 className="font-bold text-gray-900 mb-3">Bases Propuestas</h3>
+                  <h3 className="font-bold text-gray-900 mb-3">Bases ajustadas por Compras</h3>
                   <pre
                     className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto max-h-64 font-mono text-xs"
                     style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
