@@ -30,7 +30,7 @@ export default function RevisarBasesCompraPage() {
       .from('bases_generadas')
       .select('id, licitacion_id, estado, contenido_bases, licitaciones(titulo, numero, tipo_licita)')
       .eq('licitaciones.municipio_id', profile.municipio_id)
-      .in('estado', ['PROPUESTA', 'AJUSTADO', 'OBSERVADO'])
+      .in('estado', ['SELECCIONADA', 'PROPUESTA', 'AJUSTADO', 'OBSERVADO'])
       .order('fecha_generacion', { ascending: false })
     if (queryError) setError(queryError.message)
     setItems((data || []) as BaseItem[])
