@@ -139,6 +139,9 @@ export default function DashboardPage() {
               )}
               {(profile?.rol === 'ADMIN_MUNICIPIO' || profile?.rol === 'ADMIN_INSTITUCION' || profile?.rol === 'UNIDAD_COMPRA') && (
                 <>
+                  <Link href="/comprador/dashboard">
+                    <Button size="lg" className="bg-teal-700 hover:bg-teal-800">Panel de Compras</Button>
+                  </Link>
                   <Link href="/admin/revisar-licitaciones">
                     <Button size="lg" className="bg-slate-700 hover:bg-slate-800">Revisar requerimientos</Button>
                   </Link>
@@ -146,6 +149,11 @@ export default function DashboardPage() {
                     <Button size="lg" className="bg-indigo-700 hover:bg-indigo-800">Revisar bases</Button>
                   </Link>
                 </>
+              )}
+              {(profile?.rol === 'ADMIN_MUNICIPIO' || profile?.rol === 'ADMIN_INSTITUCION' || profile?.rol === 'ADMIN_SISTEMA' || profile?.rol === 'JEFE_COMPRAS') && (
+                <Link href="/admin/bases-tipos">
+                  <Button size="lg" className="bg-indigo-700 hover:bg-indigo-800">Versiones de bases</Button>
+                </Link>
               )}
             </div>
           </div>

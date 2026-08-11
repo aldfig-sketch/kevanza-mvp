@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { authenticateRequest } from '@/lib/supabaseServer'
+import { hasAnyRole } from '@/lib/roles'
 
-const ROLES_COMPRA = new Set(['ADMIN_MUNICIPIO', 'ADMIN_INSTITUCION', 'UNIDAD_COMPRA'])
+const ROLES_COMPRA = ['ADMIN_MUNICIPIO', 'ADMIN_INSTITUCION', 'ADMIN_SISTEMA', 'UNIDAD_COMPRA']
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -20,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .select('municipio_id, rol, activo')
       .eq('id', auth.user.id)
       .single()
-    if (!profile?.activo || !ROLES_COMPRA.has(profile.rol || '')) {
+    if (!profile?.activo || !(await hasAnyRole(auth.client, auth.user.id, ROLES_COMPRA))) {
       return res.status(403).json({ error: 'Solo la Unidad de Compra puede seleccionar la base tipo' })
     }
 

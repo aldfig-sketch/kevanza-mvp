@@ -31,6 +31,10 @@ async function enviarEmail(payload: EmailPayload) {
   }
 }
 
+export async function sendEmail(to: string, subject: string, html: string) {
+  return enviarEmail({ to, subject, html })
+}
+
 export async function notificarEnviadoAJuridico(
   emailUsuario: string,
   nombreUsuario: string,

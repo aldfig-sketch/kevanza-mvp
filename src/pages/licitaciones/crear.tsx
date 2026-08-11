@@ -139,8 +139,8 @@ export default function CrearLicitacionPage() {
 
     // Validaciones normativas antes de marcar listo para Mercado Público.
     if (marcarListo) {
-      if (!adjuntos.certificado || !adjuntos.oficio) {
-        setError('Adjunta el certificado de disponibilidad presupuestaria y el oficio conductor firmado antes de enviar')
+      if (!adjuntos.certificado || !adjuntos.oficio || !adjuntos.tecnico) {
+        setError('Adjunta el certificado de disponibilidad presupuestaria, el oficio conductor firmado y las EETT antes de enviar')
         setOpenSections((prev) => ({ ...prev, adjuntos: true }))
         return
       }
@@ -226,8 +226,17 @@ export default function CrearLicitacionPage() {
       if (adjuntos.certificado) uploads.push([adjuntos.certificado, 'CERTIFICADO_DISPONIBILIDAD'])
       if (adjuntos.oficio) uploads.push([adjuntos.oficio, 'OFICIO_CONDUCTOR'])
       if (adjuntos.tecnico) uploads.push([adjuntos.tecnico, 'TECNICO'])
+      const uploadedDocuments = []
       for (const [file, categoria] of uploads) {
-        await subirDocumento(created.id, profile.municipio_id, categoria, file, user?.id)
+        uploadedDocuments.push(await subirDocumento(created.id, profile.municipio_id, categoria, file, user?.id))
+      }
+      const eett = uploadedDocuments.find((documento) => documento.categoria === 'TECNICO')
+      if (eett) {
+        const { error: eettError } = await supabase
+          .from('licitaciones')
+          .update({ eett_url: eett.storage_path })
+          .eq('id', created.id)
+        if (eettError) throw eettError
       }
 
       setSuccess(true)
@@ -768,11 +777,11 @@ export default function CrearLicitacionPage() {
               </button>
               {openSections.adjuntos && (
                 <div className="px-6 py-6 space-y-5">
-                  <p className="text-sm text-gray-600 bg-rose-50 p-3 rounded-lg">El certificado y el oficio conductor firmado son obligatorios para enviar a Compras. Los documentos técnicos son opcionales.</p>
+                  <p className="text-sm text-gray-600 bg-rose-50 p-3 rounded-lg">El certificado, el oficio conductor firmado y las EETT son obligatorios para enviar a Compras.</p>
                   {([
                     ['certificado', 'Certificado de disponibilidad presupuestaria', true],
                     ['oficio', 'Oficio conductor firmado', true],
-                    ['tecnico', 'Documentos técnicos', false],
+                    ['tecnico', 'EETT / documentos técnicos', true],
                   ] as const).map(([key, label, required]) => (
                     <div key={key}>
                       <label className="block text-sm font-semibold text-gray-900 mb-2">{label}{required && <span className="text-red-600"> *</span>}</label>
