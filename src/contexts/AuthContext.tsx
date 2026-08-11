@@ -10,7 +10,9 @@ export interface UserProfile {
   full_name?: string
   municipio_id?: string
   rol?: string
+  role_id?: number
   activo?: boolean
+  debe_cambiar_contrasena?: boolean
 }
 
 interface AuthContextType {
@@ -62,7 +64,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const data = await getUserProfile(userId)
       if (!data) return
-      setProfile(data as UserProfile)
+      const { data: firstLogin } = await supabase
+        .from('usuarios_primer_login')
+        .select('debe_cambiar_contrasena')
+        .eq('usuario_id', userId)
+        .maybeSingle()
+      setProfile({ ...(data as UserProfile), debe_cambiar_contrasena: firstLogin?.debe_cambiar_contrasena === true })
 
       // Resolver nombre del organismo/unidad compradora para mostrarlo en la UI.
       if (data.municipio_id) {

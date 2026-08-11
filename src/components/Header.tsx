@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { LogOut, Menu, X } from 'lucide-react'
+import { LogOut, Menu, Settings, X } from 'lucide-react'
 import { useState } from 'react'
 
 export function Header() {
@@ -16,6 +16,7 @@ export function Header() {
     await signOut()
     router.push('/auth/login')
   }
+  const isAdmin = ['ADMIN_MUNICIPIO', 'ADMIN_INSTITUCION', 'ADMIN_SISTEMA'].includes(profile?.rol || '')
 
   if (router.pathname.startsWith('/auth')) {
     return null
@@ -46,6 +47,12 @@ export function Header() {
               >
                 Requerimientos
               </Link>
+              {isAdmin && <Link
+                href="/admin/panel"
+                className={`inline-flex items-center gap-1.5 text-sm font-medium transition-colors duration-200 ${router.pathname.startsWith('/admin') ? 'text-teal-600' : 'text-gray-600 hover:text-gray-900'}`}
+              >
+                <Settings className="w-4 h-4" /> Administración
+              </Link>}
               <Link
                 href="/dashboard"
                 className={`text-sm font-medium transition-colors duration-200 ${
@@ -89,6 +96,13 @@ export function Header() {
                 >
                   Iniciar sesión
                 </Link>
+                {isAdmin && <Link
+                  href="/admin/panel"
+                  className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Administración
+                </Link>}
                 <Link
                   href="/auth/signup"
                   className="px-4 py-2 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all duration-200 shadow-md hover:shadow-lg"

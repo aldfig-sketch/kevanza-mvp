@@ -3,11 +3,7 @@
  * Track all important actions for compliance and debugging
  */
 
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-const supabase = createClient(supabaseUrl, supabaseKey)
+import { supabase } from './supabase'
 
 export type AuditAction =
   | 'CREATE'
@@ -34,23 +30,15 @@ export interface AuditLogEntry {
  */
 export async function logAudit(entry: AuditLogEntry): Promise<void> {
   try {
-    const { error } = await supabase.from('audit_logs').insert([
-      {
-        usuario_id: entry.usuario_id,
-        accion: entry.accion,
-        tabla: entry.tabla,
-        registro_id: entry.registro_id,
-        cambios: entry.cambios || {},
-        ip_address: entry.ip_address,
-        user_agent: entry.user_agent,
-        created_at: new Date().toISOString(),
-      },
-    ])
-
-    if (error) {
-      console.error('[Audit] Error logging:', error)
-      // No fallar la operación si audit falla
-    }
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    if (!token) return
+    const response = await fetch('/api/audit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ accion: entry.accion, tabla: entry.tabla, registro_id: entry.registro_id, cambios: entry.cambios || {} }),
+    })
+    if (!response.ok) console.error('[Audit] Error logging:', response.status)
   } catch (error) {
     console.error('[Audit] Error in logAudit:', error)
   }

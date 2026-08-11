@@ -5,6 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { signIn } from '@/lib/auth'
+import { registrarLogin } from '@/lib/usuariosService'
+import { supabase } from '@/lib/supabase'
 import { Mail, Lock, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 const loginSchema = z.object({
@@ -34,10 +36,15 @@ export default function LoginPage() {
 
     try {
       await signIn(data.email, data.password)
+      await registrarLogin().catch(() => undefined)
+      const { data: sessionData } = await supabase.auth.getSession()
+      const { data: firstLogin } = sessionData.session?.user
+        ? await supabase.from('usuarios_primer_login').select('debe_cambiar_contrasena').eq('usuario_id', sessionData.session.user.id).maybeSingle()
+        : { data: null }
       setSuccess(true)
       setTimeout(() => {
         const redirectTo = router.query.redirectTo as string
-        router.push(redirectTo || '/licitaciones')
+        router.push(firstLogin?.debe_cambiar_contrasena ? '/onboarding' : redirectTo || '/licitaciones')
       }, 1500)
     } catch (err: any) {
       if (err?.message?.includes('Invalid login credentials')) {
