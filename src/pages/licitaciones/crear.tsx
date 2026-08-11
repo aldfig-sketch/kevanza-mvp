@@ -6,6 +6,7 @@ import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { Alert } from '@/components/Alert'
 import { supabase } from '@/lib/supabase'
+import { subirDocumento } from '@/lib/documentos'
 import { ChevronDown, ArrowLeft, CheckCircle2, AlertCircle, Scale } from 'lucide-react'
 import {
   clasificarPorMonto,
@@ -29,6 +30,20 @@ export default function CrearLicitacionPage() {
     numero: '',
     titulo: '',
     descripcion: '',
+    objeto: '',
+    fecha_inicio: '',
+    cuenta_presupuestaria: '',
+    modalidad: 'Publica',
+    direccion_solicitante: '',
+    unidad_tecnica: '',
+    funcionario_responsable: '',
+    antecedentes_oferta: '',
+    multas: '',
+    visita_terreno: 'No',
+    visita_terreno_tipo: 'Voluntaria',
+    estados_pago: '',
+    obligaciones_contratista: '',
+    causales_termino: '',
     tipo_licita: 'Infraestructura',
     presupuesto_total: '',
     porcentaje_seriedad: '',
@@ -41,15 +56,22 @@ export default function CrearLicitacionPage() {
 
   // Campos específicos según tipo de compra (datos_bases)
   const [datosBases, setDatosBases] = useState<Record<string, any>>({})
+  const [adjuntos, setAdjuntos] = useState<{
+    certificado: File | null
+    oficio: File | null
+    tecnico: File | null
+  }>({ certificado: null, oficio: null, tecnico: null })
 
   const [openSections, setOpenSections] = useState({
     basico: true,
     presupuesto: false,
     especificos: false,
     ponderaciones: false,
+    ficha: true,
+    adjuntos: false,
   })
 
-  const toggleSection = (section: 'basico' | 'presupuesto' | 'especificos' | 'ponderaciones') => {
+  const toggleSection = (section: 'basico' | 'presupuesto' | 'especificos' | 'ponderaciones' | 'ficha' | 'adjuntos') => {
     setOpenSections((prev) => ({
       ...prev,
       [section]: !prev[section],
@@ -66,6 +88,15 @@ export default function CrearLicitacionPage() {
 
   const handleCampoTipo = (name: string, value: any) => {
     setDatosBases((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleAdjunto = (key: 'certificado' | 'oficio' | 'tecnico', file?: File) => {
+    if (!file) return
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setError('Los adjuntos de la ficha deben estar en formato PDF')
+      return
+    }
+    setAdjuntos((prev) => ({ ...prev, [key]: file }))
   }
 
   // Clasificación por UTM (en vivo) y campos del tipo seleccionado
@@ -108,6 +139,11 @@ export default function CrearLicitacionPage() {
 
     // Validaciones normativas antes de marcar listo para Mercado Público.
     if (marcarListo) {
+      if (!adjuntos.certificado || !adjuntos.oficio) {
+        setError('Adjunta el certificado de disponibilidad presupuestaria y el oficio conductor firmado antes de enviar')
+        setOpenSections((prev) => ({ ...prev, adjuntos: true }))
+        return
+      }
       const errSeriedad = validarGarantiaSeriedad(
         clasificacion,
         formData.porcentaje_seriedad ? parseFloat(formData.porcentaje_seriedad) : null
@@ -137,11 +173,29 @@ export default function CrearLicitacionPage() {
     setLoading(true)
 
     try {
-      const { error: insertError } = await supabase.from('licitaciones').insert([
+      const { data: created, error: insertError } = await supabase.from('licitaciones').insert([
         {
           numero: formData.numero,
           titulo: formData.titulo,
           descripcion: formData.descripcion,
+          objeto: formData.objeto,
+          fecha_inicio: formData.fecha_inicio || null,
+          cuenta_presupuestaria: formData.cuenta_presupuestaria || null,
+          modalidad: formData.modalidad,
+          direccion_solicitante: formData.direccion_solicitante || null,
+          unidad_tecnica: formData.unidad_tecnica || null,
+          funcionario_responsable: formData.funcionario_responsable || null,
+          antecedentes_oferta: formData.antecedentes_oferta.split('\n').map((item) => item.trim()).filter(Boolean),
+          multas: formData.multas ? [{ detalle: formData.multas }] : [],
+          visita_terreno: { requerida: formData.visita_terreno === 'Si', tipo: formData.visita_terreno_tipo },
+          estados_pago: formData.estados_pago || null,
+          obligaciones_contratista: formData.obligaciones_contratista || null,
+          causales_termino: formData.causales_termino || null,
+          criterios_evaluacion: [
+            { nombre: 'Precio', porcentaje: parseFloat(formData.ponderacion_precio) || 0 },
+            { nombre: 'Técnica', porcentaje: parseFloat(formData.ponderacion_tecnica) || 0 },
+            { nombre: 'Plazo', porcentaje: parseFloat(formData.ponderacion_plazo) || 0 },
+          ],
           municipio_id: profile.municipio_id,
           tipo_licita: formData.tipo_licita,
           presupuesto_total: parseFloat(formData.presupuesto_total) || 0,
@@ -163,9 +217,18 @@ export default function CrearLicitacionPage() {
           created_by: user?.id,
           published_at: null,
         },
-      ])
+      ]).select('id').single()
 
       if (insertError) throw insertError
+      if (!created?.id) throw new Error('No se pudo identificar el requerimiento creado')
+
+      const uploads: Array<[File, 'CERTIFICADO_DISPONIBILIDAD' | 'OFICIO_CONDUCTOR' | 'TECNICO']> = []
+      if (adjuntos.certificado) uploads.push([adjuntos.certificado, 'CERTIFICADO_DISPONIBILIDAD'])
+      if (adjuntos.oficio) uploads.push([adjuntos.oficio, 'OFICIO_CONDUCTOR'])
+      if (adjuntos.tecnico) uploads.push([adjuntos.tecnico, 'TECNICO'])
+      for (const [file, categoria] of uploads) {
+        await subirDocumento(created.id, profile.municipio_id, categoria, file, user?.id)
+      }
 
       setSuccess(true)
       setTimeout(() => {
@@ -334,7 +397,100 @@ export default function CrearLicitacionPage() {
               )}
             </div>
 
-            {/* Sección 2: Presupuesto */}
+            {/* Sección 2: Ficha real SECPLAC */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200/50 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleSection('ficha')}
+                className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-200/50"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-teal-600 text-white font-bold text-sm">2</div>
+                  <h2 className="text-lg font-bold text-gray-900">Ficha de requerimiento</h2>
+                </div>
+                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${openSections.ficha ? 'rotate-180' : ''}`} />
+              </button>
+              {openSections.ficha && (
+                <div className="px-6 py-6 space-y-5">
+                  <p className="text-sm text-gray-600 bg-teal-50 p-3 rounded-lg">Completa los antecedentes que la Unidad Técnica entrega a Compras. Estos datos alimentan la selección y ajuste de la base tipo.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Dirección municipal solicitante</label>
+                      <input name="direccion_solicitante" value={formData.direccion_solicitante} onChange={handleChange} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg" placeholder="Dirección o departamento" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Unidad técnica *</label>
+                      <input name="unidad_tecnica" value={formData.unidad_tecnica} onChange={handleChange} required={true} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg" placeholder="Unidad responsable" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Funcionario responsable *</label>
+                      <input name="funcionario_responsable" value={formData.funcionario_responsable} onChange={handleChange} required={true} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg" placeholder="Nombre y cargo" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Cuenta presupuestaria</label>
+                      <input name="cuenta_presupuestaria" value={formData.cuenta_presupuestaria} onChange={handleChange} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg" placeholder="22.XX.XXX" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Objeto de la contratación *</label>
+                    <textarea name="objeto" value={formData.objeto} onChange={handleChange} required={true} rows={3} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg" placeholder="Qué se necesita contratar y para qué finalidad pública" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Fecha inicio</label>
+                      <input type="date" name="fecha_inicio" value={formData.fecha_inicio} onChange={handleChange} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Modalidad *</label>
+                      <select name="modalidad" value={formData.modalidad} onChange={handleChange} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg">
+                        <option value="Publica">Pública</option>
+                        <option value="Privada">Privada</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Visita a terreno</label>
+                      <select name="visita_terreno" value={formData.visita_terreno} onChange={handleChange} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg">
+                        <option value="No">No aplica</option>
+                        <option value="Si">Sí</option>
+                      </select>
+                    </div>
+                  </div>
+                  {formData.visita_terreno === 'Si' && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Tipo de visita</label>
+                      <select name="visita_terreno_tipo" value={formData.visita_terreno_tipo} onChange={handleChange} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg">
+                        <option value="Voluntaria">Voluntaria</option>
+                        <option value="Obligatoria">Obligatoria</option>
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Antecedentes requeridos en la oferta</label>
+                    <textarea name="antecedentes_oferta" value={formData.antecedentes_oferta} onChange={handleChange} rows={3} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg" placeholder="Un antecedente por línea: experiencia, equipo, metodología..." />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Multas</label>
+                      <textarea name="multas" value={formData.multas} onChange={handleChange} rows={4} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg" placeholder="Causal, monto y aplicación" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Estados de pago</label>
+                      <textarea name="estados_pago" value={formData.estados_pago} onChange={handleChange} rows={4} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg" placeholder="Hitos y condiciones de pago" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Obligaciones del contratista</label>
+                      <textarea name="obligaciones_contratista" value={formData.obligaciones_contratista} onChange={handleChange} rows={4} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg" placeholder="Obligaciones específicas" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Causales de término anticipado</label>
+                    <textarea name="causales_termino" value={formData.causales_termino} onChange={handleChange} rows={3} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sección 3: Presupuesto */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200/50 overflow-hidden">
               <button
                 type="button"
@@ -593,6 +749,37 @@ export default function CrearLicitacionPage() {
                     <span className="text-lg">{ponderacionesValidas ? '✓' : '⚠'}</span>
                     <span>Total: {ponderacionesTotal.toFixed(2)}%</span>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sección 6: Adjuntos obligatorios */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200/50 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleSection('adjuntos')}
+                className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-200/50"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-rose-600 text-white font-bold text-sm">6</div>
+                  <h2 className="text-lg font-bold text-gray-900">Adjuntos PDF</h2>
+                </div>
+                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${openSections.adjuntos ? 'rotate-180' : ''}`} />
+              </button>
+              {openSections.adjuntos && (
+                <div className="px-6 py-6 space-y-5">
+                  <p className="text-sm text-gray-600 bg-rose-50 p-3 rounded-lg">El certificado y el oficio conductor firmado son obligatorios para enviar a Compras. Los documentos técnicos son opcionales.</p>
+                  {([
+                    ['certificado', 'Certificado de disponibilidad presupuestaria', true],
+                    ['oficio', 'Oficio conductor firmado', true],
+                    ['tecnico', 'Documentos técnicos', false],
+                  ] as const).map(([key, label, required]) => (
+                    <div key={key}>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">{label}{required && <span className="text-red-600"> *</span>}</label>
+                      <input type="file" accept="application/pdf,.pdf" onChange={(event) => handleAdjunto(key, event.target.files?.[0])} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg" />
+                      {adjuntos[key] && <p className="text-xs text-green-700 mt-1">✓ {adjuntos[key]?.name}</p>}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

@@ -1,7 +1,13 @@
 import { supabase } from './supabase'
 import { auditLog } from './audit'
 
-export type CategoriaDocumento = 'BASE' | 'ANEXO' | 'DECRETO'
+export type CategoriaDocumento =
+  | 'BASE'
+  | 'ANEXO'
+  | 'DECRETO'
+  | 'CERTIFICADO_DISPONIBILIDAD'
+  | 'OFICIO_CONDUCTOR'
+  | 'TECNICO'
 
 export interface Documento {
   id: string
@@ -36,6 +42,9 @@ export async function subirDocumento(
 ): Promise<Documento> {
   if (file.size > MAX_BYTES) {
     throw new Error('El archivo supera el máximo de 25 MB')
+  }
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    throw new Error('Solo se permiten archivos PDF para esta documentación')
   }
 
   // Determinar versión: última versión del mismo nombre + categoría + 1

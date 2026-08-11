@@ -44,6 +44,16 @@ export async function enviarAJuridico(basesId: string, userId: string, client: S
 
     if (error) throw error
 
+    await db
+      .from('bases_generadas')
+      .update({ estado: 'ENVIADA_JURIDICO', updated_at: new Date().toISOString() })
+      .eq('id', basesId)
+
+    await db
+      .from('licitaciones')
+      .update({ estado: 'ENVIADA_JURIDICO' })
+      .eq('id', basesData.licitacion_id)
+
     // Enviar email al usuario
     try {
       const { data: usuarioData } = await db
@@ -100,6 +110,7 @@ export async function obtenerRevisionesEnEspera(userId: string, client: Supabase
     .order('fecha_envio', { ascending: false })
 
   if (error) throw error
+
   return data
 }
 
@@ -122,6 +133,15 @@ export async function agregarObservaciones(
     .single()
 
   if (error) throw error
+
+  await client
+    .from('bases_generadas')
+    .update({ estado: 'OBSERVADO', updated_at: new Date().toISOString() })
+    .eq('id', data.bases_id)
+  await client
+    .from('licitaciones')
+    .update({ estado: 'OBSERVADO' })
+    .eq('id', data.requerimiento_id)
 
   // Enviar email al usuario con observaciones
   try {
@@ -180,6 +200,10 @@ export async function aprobarBases(revisionId: string, userId: string, client: S
     .from('bases_generadas')
     .update({ estado: 'APROBADO' })
     .eq('id', data.bases_id)
+  await client
+    .from('licitaciones')
+    .update({ estado: 'APROBADO_JURIDICO' })
+    .eq('id', data.requerimiento_id)
 
   // Enviar email al usuario de aprobación
   try {
