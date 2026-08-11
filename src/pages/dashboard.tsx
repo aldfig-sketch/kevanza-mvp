@@ -248,7 +248,7 @@ export default function DashboardPage() {
                   <span className="text-lg font-bold text-blue-600">2</span>
                 </div>
                 <h4 className="font-semibold text-gray-900 mb-1">Elaborar bases</h4>
-                <p className="text-sm text-gray-600">Redacta bases, anexos y criterios de evaluación</p>
+                <p className="text-sm text-gray-600">Completa la ficha y ajusta una base tipo institucional</p>
               </div>
 
               <div className="text-center">
