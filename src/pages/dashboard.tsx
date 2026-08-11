@@ -40,6 +40,10 @@ export default function DashboardPage() {
   }, [user, authLoading, router])
 
   useEffect(() => {
+    if (user && profile?.debe_cambiar_contrasena) router.replace('/onboarding')
+  }, [profile?.debe_cambiar_contrasena, router, user])
+
+  useEffect(() => {
     if (user && profile?.municipio_id) {
       fetchStats()
     } else if (user && !authLoading) {
